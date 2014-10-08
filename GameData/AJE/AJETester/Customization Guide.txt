@@ -1,0 +1,107 @@
+Quick and Dirty guideline to jet engine modeling
+
+For example
+
+	MODULE
+	{
+		name = AJEModuleFX		// this is for ModuleEnginesFX, for ModuleEngines use AJEModule
+		IspMultiplier=1			// for Kerosene=1 IntakeAir=15, use 1/16=0.0625
+		useOverheat=false 		// default value is true
+		defaultentype=2   		// load default values for a type of engine
+		acore=5.8   			// custom parameters
+		byprat=0
+		prat3=16
+		tt4=2700
+		tt7=4800
+		abflag=1
+		fhv=18600
+		eta7=0.8
+		tinlt=1200
+		tfan=1500
+		tcomp=2500
+		
+		
+	}
+
+
+1. Find out the max thrust (actually static thrust at sea level) with or without afterburner, and corresponding SFC
+2. Find out compressor pressure ratio and turbine entry temperature. If you cannot find it look for engines from the same era and similar design.
+3. set tt4 and prat3, set abflag=0
+4. adjust acore and efficiency coefficients to match max thrust and SFC without afterburner
+5. set abflag=1 and adjust tt7 and eta7 to match thrust/SFC with afterburner
+
+
+=====================================================
+AJE Propeller example:
+
+	MODULE
+	{
+		name=AJEPropeller                   
+		IspMultiplier = 1		// same as jet
+		useOxygen = true  		// for electric propellers use false
+								// below five are reference parameters for definition of the propeller, they are by no means the actual airplane performance
+		r0 = 1.75				// radius of propeller in meter
+		v0 = 240   				//	cruise speed in knot               
+		omega0 = 1157			// cruise rpm of propeller
+		rho0 = 1				// cruise altitude air density in kg/m3
+		power0 = 950			// cruise engine power in horsepower
+
+//Some propellers have more thrust at low speed but are less efficient at high speed, some others are the opposite. Tweak the above parameters and try
+		
+		fine = 0.2				// these two are the max and min pitching control authority
+		coarse = 5				// usually not so important. The pitching is done automatically
+
+		omega = 1537			// max rpm
+		power = 1795			// max engine power in Horsepower
+		gearratio = 0.542		// gear ratio between the engine and the propeller, not important
+		turbo = 3.1				// the bigger this is, the stronger a supercharger it has, hence better performance at high alt.
+
+		BSFC = 7.62e-8			// SFC in kg/(W * s)
+
+	}
+
+
+The algorithm is copied from YASim program, which is one of the flight models of an open-source flight simulator "FlightGear". So the easiest way is to check if there are ready-made propellers from FlightGear community:
+
+http://www.flightgear.org/download/aircraft-v3-0/
+
+For example we downloaded Fw190, found fw190-yasim.xml in the zip file. In the file we look for:
+<propeller   x="-1.2" y="0" z="-0.2"
+           radius="1.75" 						//there's r0
+           mass="2660" moment="84.5"
+           cruise-alt="5000" cruise-power="950"			//cruise alt in meter, power in HP
+           cruise-speed="240" cruise-rpm="1157"
+           gear-ratio="0.542"
+           min-rpm="300" max-rpm="1537" >		//max rpm
+  <actionpt x="-0.4" y="0" z="0"/>
+  <control-input axis="/controls/engines/engine[0]/propeller-pitch" control="ADVANCE" />
+  <piston-engine
+    eng-power="1795" 
+    eng-rpm="2700"
+
+    wastegate-mp="81"
+    displacement="2560"
+    compression="7.22"
+		supercharger="1"	
+		turbo-mul="3.1">				//that's turbo
+		
+		
+========================================================================
+
+AJE rotor blades
+
+	MODULE
+	{
+		name=AJERotor
+		IspMultiplier = 1	//same
+		useOxygen = true	//same
+		rpm = 412			//rpm of rotor blade
+		r = 6				//radius in meter
+		weight = 14000		//max takeoff mass in kg
+		power = 6150		//max power output in HP
+		BSFC = 8.47e-8		//same
+		VTOLbuff = 1		//this is a hack I made to improve the performance of V-22 style VTOL engines, which are basically both rotor blades and propellers. Don't use unless you know what you're doing. 0 corresponds to max buff, bigger numbers means smaller buff.
+		
+	}
+
+
