@@ -55,7 +55,7 @@ namespace AJE
                 return;
             FloatCurve resultcurve = new FloatCurve();
             this.realIsp = isp;
-            isp = isp * IspMultiplier * 0.2f;//In 0.25 all Isp are 1/5 real value, weird.
+            isp = isp * IspMultiplier;//In 0.25 all Isp are 1/5 real value, weird.
             resultcurve.Add(0, isp);
             resultcurve.Add(1, isp); 
             
