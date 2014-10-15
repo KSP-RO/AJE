@@ -253,7 +253,7 @@ namespace AJE
                 if (p.Modules.Contains("AJEInlet"))
                 {
                     i = (AJEInlet)p.Modules["AJEInlet"];
-                    if (((ModuleResourceIntake)p.Modules["ModuleResourceIntake"]).intakeEnabled)
+                    if (true)
                     {
                         InletArea += i.Area;
                         OverallTPR += i.Area * i.cosine * i.cosine * i.GetTPR((float)aje.fsmach);
