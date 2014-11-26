@@ -323,6 +323,40 @@ namespace AJE
                 }
             }
         }
+        public float engineAccelerationSpeed
+        {
+            set
+            {
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        engine.engineAccelerationSpeed = value;
+                        break;
+                    case EngineType.ModuleEngineFX:
+                        engineFX.engineAccelerationSpeed = value;
+                        break;
+                    case EngineType.FSengine:
+                        break;
+                }
+            }
+        }
+        public float engineDecelerationSpeed
+        {
+            set
+            {
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        engine.engineDecelerationSpeed = value;
+                        break;
+                    case EngineType.ModuleEngineFX:
+                        engineFX.engineDecelerationSpeed = value;
+                        break;
+                    case EngineType.FSengine:
+                        break;
+                }
+            }
+        }
         public float heatProduction
         {
             set
