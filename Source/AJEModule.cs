@@ -134,8 +134,10 @@ namespace AJE
             engine.IspMultiplier = IspMultiplier;
             engine.idle = idle;
             engine.ThrustUpperLimit = maxThrust;
-            part.maxTemp = 3600f;
-            engine.heatProduction = 360f;
+            part.maxTemp = 1800f;
+            if(tt4 >0)
+                part.maxTemp = (tt4-32f) * (1f/1.8f);
+            engine.heatProduction = part.maxTemp * 0.1f;
             aje = new AJESolver();
             aje.setDefaults();
 
