@@ -225,8 +225,8 @@ namespace AJE
                 aje.prat[3] = aje.p3p2d = prat3Curve.Evaluate(0.0f);
             }
 
-            engine.engineDecelerationSpeed = 2 / (float)(aje.areaCore * (1 + aje.byprat));
-            engine.engineAccelerationSpeed = 2 / (float)(aje.areaCore * (1 + aje.byprat));
+            engine.engineDecelerationSpeed = 1 / (float)(aje.areaCore * (1 + aje.byprat));
+            engine.engineAccelerationSpeed = 1 / (float)(aje.areaCore * (1 + aje.byprat));
         }
 
 
