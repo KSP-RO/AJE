@@ -1,0 +1,3 @@
+C:\Users\Yichen\Desktop\AJE\GameData\AJE\Plugins\AJE.dll
+C:\Users\Yichen\Desktop\AJE\Source\obj\Release\AJE.csprojResolveAssemblyReference.cache
+C:\Users\Yichen\Desktop\AJE\Source\obj\Release\AJE.dll
