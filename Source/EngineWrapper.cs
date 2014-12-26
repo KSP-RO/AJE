@@ -55,7 +55,7 @@ namespace AJE
                 return;
             FloatCurve resultcurve = new FloatCurve();
             this.realIsp = isp;
-            isp = isp * IspMultiplier;//In 0.25 all Isp are 1/5 real value, weird.
+            isp = isp * IspMultiplier;
             resultcurve.Add(0, isp);
             resultcurve.Add(1, isp); 
             
@@ -74,11 +74,14 @@ namespace AJE
       
         }
 
-        public void SetThrust(float power)
+        public void SetThrust(float t)
         {
-            if (power > 0)
+            if (t > 0)
             {
-                this.maxThrust = Mathf.Min(power, ThrustUpperLimit);
+                if (t > ThrustUpperLimit)
+                    this.maxThrust = ThrustUpperLimit + (t - ThrustUpperLimit) / 10;
+                else
+                    this.maxThrust = t;
             }
             else
             {

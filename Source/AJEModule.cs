@@ -10,226 +10,106 @@ namespace AJE
 
     public class AJEModule : PartModule
     {
-        public AJESolver aje;
-
         [KSPField(isPersistant = false, guiActive = false)]
-        public float IspMultiplier = 1f;
+        public float Area = 0.1f;
+        public float TPR = 1;
         [KSPField(isPersistant = false, guiActive = false)]
-        public int defaultentype = 0;
-
+        public float BPR = 0;
         [KSPField(isPersistant = false, guiActive = false)]
-        public bool useOverheat = true;
-        //       [KSPField(isPersistant = false, guiActive = true)]
-        public float parttemp;
-        //       [KSPField(isPersistant = false, guiActive = true)]
-        public float maxtemp;
-
-
+        public float CPR = 20;
         [KSPField(isPersistant = false, guiActive = false)]
-        public bool useMultiMode = false;
+        public float FPR = 1;
         [KSPField(isPersistant = false, guiActive = false)]
-        public bool isReactionEngine = false;
+        public float Mdes = 0.9f;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float idle = 0.03f;
+        public float Tdes = 250;
         [KSPField(isPersistant = false, guiActive = false)]
-        public int abflag = -1;
+        public float eta_c = 0.95f;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float acore = -1;
+        public float eta_t = 0.98f;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float byprat = -1;
+        public float eta_n = 0.9f;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float fhv = -1;
+        public float FHV = 46.8E6f;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float prat13 = -1;
+        public float TIT = 1200;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float prat3 = -1;
+        public float TAB = 0;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float prat2 = -1;
+        public bool exhaustMixer = false;
+        [KSPField(isPersistant = false, guiActive = true)]
+        public String Inlet;
+        [KSPField(isPersistant = false, guiActiveEditor = true)]
+        public float Need_Area;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float prat4 = -1;
+        public float maxThrust = 999999;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float tinlt = -1;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float tfan = -1;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float tt7 = -1;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float tt4 = -1;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float tcomp = -1;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float eta2 = -1;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float eta13 = -1;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float eta3 = -1;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float eta4 = -1;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float eta5 = -1;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float eta7 = -1;
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float maxThrust = 99999;
-
-        [KSPField(isPersistant = false, guiActive = false)]
-        public float ABIspMult = 1.0f;
-
-
-        public EngineWrapper engine;
-        public bool useAB = false;
-        public float ABthreshold = 0.667f;
-        public float ABmax, ABmin;
-
+        public float maxT3 = 9999;
         [KSPField(isPersistant = false, guiActive = true)]
         public String Environment;
 
-        [KSPField(isPersistant = false, guiActive = true)]
-        public String Mode;
-        [KSPField(isPersistant = false, guiActive = true)]
-        public String Inlet;
-
-        [KSPField(isPersistant = false, guiActiveEditor = true)]
-        public float Need_Area;
-        //      [KSPField(isPersistant = false, guiActive = true)]
-        public float fireflag;
-
-        public float OverallThrottle = 0;
-
-
-        // NK
-        [KSPField(isPersistant = false, guiActive = false)]
-        public FloatCurve prat3Curve = new FloatCurve();
-
-        [KSPField(isPersistant = false, guiActive = false)]
-        bool usePrat3Curve = false;
-
-
-        public override void OnLoad(ConfigNode node)
+        public AJESolver aje;
+        public EngineWrapper engine;
+        float acturalThrottle = 0;
+        public List<AJEModule> engineList;
+        public List<AJEInlet> inletList;
+        public float OverallTPR = 1, Arearatio = 1;
+        public void Start()
         {
-            base.OnLoad(node);
-            if (node.HasNode("prat3Curve"))
-            {
-                //prat3Curve.Load(node.GetNode("prat3Curve"));
-                print("AJE for part " + part.name + " found prat3Curve, usePrat3Curve = " + usePrat3Curve);
-                float min, max;
-                prat3Curve.FindMinMaxValue(out min, out max);
-                print("curve: " + prat3Curve.minTime + ": " + min + "; " + prat3Curve.maxTime + ": " + max);
-            }
-        }
-
-
-        public override void OnStart(StartState state)
-        {
-
-            if (state == StartState.Editor)
-            {
-                Need_Area = acore * (1 + byprat);
-                return;
-            }
-            if (vessel == null)
-                return;
+            Need_Area = Area * (1 + BPR);
+            acturalThrottle = 0;
             engine = new EngineWrapper(part);
+            engine.idle = 1f;
+            engine.IspMultiplier = 1f;
             engine.useVelocityCurve = false;
-            engine.IspMultiplier = IspMultiplier;
-            engine.idle = idle;
             engine.ThrustUpperLimit = maxThrust;
-            part.maxTemp = 1800f;
-            if(tt4 >0)
-                part.maxTemp = (tt4-32f) * (1f/1.8f);
+            part.maxTemp = 1800;
+            if (TIT > 0)
+                part.maxTemp = TIT;
             engine.heatProduction = part.maxTemp * 0.1f;
             aje = new AJESolver();
-            aje.setDefaults();
+            aje.InitializeOverallEngineData(
+                Area,
+                TPR,
+                BPR,
+                CPR,
+                FPR,
+                Mdes,
+                Tdes,
+                eta_c,
+                eta_t,
+                eta_n,
+                FHV,
+                TIT,
+                TAB,
+                exhaustMixer
+                );
 
-            switch (defaultentype)
+            if (CPR != 1)
             {
-                case 1:
-                    aje.loadJ85();
-                    break;
-                case 2:
-                    aje.loadF100();
-                    break;
-                case 3:
-                    aje.loadCF6();
-                    break;
-                case 4:
-                    aje.loadRamj();
-                    break;
+                engine.engineDecelerationSpeed = .1f / (Area * (1 + BPR));
+                engine.engineAccelerationSpeed = .1f / (Area * (1 + BPR));
             }
-            if (true)
+            else
+            {           //It's not like there's anything in a ramjet to spool, now is there?
+                engine.useEngineResponseTime = false;
+            }
+            engineList.Clear();
+            inletList.Clear();
+            for (int j = 0; j < vessel.parts.Count; j++)        //reduces garbage produced compared to foreach due to Unity Mono issues
             {
-                if (acore != -1 && byprat != -1)
+                Part p = vessel.parts[j];
+                if (p.Modules.Contains("AJEModule"))
                 {
-                    aje.areaCore = acore;
-                    aje.byprat = byprat;
-                    aje.areaFan = acore * (1.0 + byprat);
-                    aje.a2d = aje.a2 = aje.areaFan;
-
+                    engineList.Add((AJEModule)p.Modules["AJEModule"]);          //consider storing list of affected AJEModules and AJEInlets, perhaps a single one for each vessel.  Would result in better performance     
                 }
-                if (tt4 != -1)
-                    aje.tt[4] = aje.tt4 = aje.tt4d = tt4;
-                if (prat3 != -1)
-                    aje.prat[3] = aje.p3p2d = prat3;
-                if (prat13 != -1)
-                    aje.prat[13] = aje.p3fp2d = prat13;
-                if (tcomp != -1)
-                    aje.tcomp = tcomp;
-                if (fhv != -1)
-                    aje.fhvd = aje.fhv = fhv;
-                if (tt7 != -1)
-                    aje.tt[7] = aje.tt7 = aje.tt7d = tt7;
-                if (eta2 != -1)
-                    aje.eta[2] = eta2;
-                if (prat2 != -1)
-                    aje.prat[2] = prat2;
-                if (prat4 != -1)
-                    aje.prat[4] = prat4;
-                if (eta3 != -1)
-                    aje.eta[3] = eta3;
-                if (eta4 != -1)
-                    aje.eta[4] = eta4;
-                if (eta5 != -1)
-                    aje.eta[5] = eta5;
-                if (eta7 != -1)
-                    aje.eta[7] = eta7;
-                if (eta13 != -1)
-                    aje.eta[13] = eta13;
-                if (tinlt != -1)
-                    aje.tinlt = tinlt;
-                if (tfan != -1)
-                    aje.tfan = tfan;
-                if (tcomp != -1)
-                    aje.tcomp = tcomp;
-                if (abflag != -1)
-                    aje.abflag = abflag;
+                if (p.Modules.Contains("AJEInlet"))
+                {
+                    inletList.Add((AJEInlet)p.Modules["AJEInlet"]); 
+                }
             }
-            if (aje.abflag == 1 && (!isReactionEngine))
-            {
-                useAB = true;
-                ABmax = (float)aje.tt7;
-                ABmin = (float)(aje.tt4);
-            }
-            if (part.partInfo.partPrefab.Modules.Contains("AJEModule"))
-            {
-                AJEModule a = (AJEModule)part.partInfo.partPrefab.Modules["AJEModule"];
-                usePrat3Curve = a.usePrat3Curve;
-                prat3Curve = a.prat3Curve;
-            }
-            if (usePrat3Curve)
-            {
-                print("AJE OnStart for part " + part.name + " found prat3Curve");
-                float min, max;
-                prat3Curve.FindMinMaxValue(out min, out max);
-                print("curve: " + prat3Curve.minTime + ": " + min + "; " + prat3Curve.maxTime + ": " + max);
-                aje.fsmach = 0.0;
-                aje.prat[3] = aje.p3p2d = prat3Curve.Evaluate(0.0f);
-            }
-
-            engine.engineDecelerationSpeed = 1 / (float)(aje.areaCore * (1 + aje.byprat));
-            engine.engineAccelerationSpeed = 1 / (float)(aje.areaCore * (1 + aje.byprat));
         }
-
-
+              
         public void FixedUpdate()
         {
             if (HighLogic.LoadedSceneIsEditor)
@@ -242,110 +122,89 @@ namespace AJE
                 return;
             }
 
-            #region Inlet
+            UpdateInletEffects();
+            UpdateFlightCondition(vessel.altitude, part.vessel.srfSpeed, vessel.mainBody);
 
-            float Arearatio, OverallTPR = 0, EngineArea = 0, InletArea = 0;
-            AJEModule e;
-            AJEInlet i;
-            foreach (Part p in vessel.parts)
+            if(CPR == 1 && aje.GetM0()<0.3)//ramjet
             {
-
-                if (p.Modules.Contains("AJEModule"))
-                {
-                    e = (AJEModule)p.Modules["AJEModule"];
-                    EngineArea += (float)(e.aje.areaCore * (1 + e.aje.byprat));
-                }
-                if (p.Modules.Contains("AJEInlet"))
-                {
-                    i = (AJEInlet)p.Modules["AJEInlet"];
-                    if (true)
-                    {
-                        InletArea += i.Area;
-                        OverallTPR += i.Area * i.cosine * i.cosine * i.GetTPR((float)aje.fsmach);
-                    }
-                }
-            }
-            if (InletArea > 0)
-                OverallTPR /= InletArea;
-            Arearatio = Mathf.Min(InletArea / EngineArea, 1f);
-            aje.eta[2] = Mathf.Clamp(Mathf.Sqrt(Arearatio) * OverallTPR, 0.001f, 1f);
-
-            Inlet = "Area:" + ((int)(Arearatio * 100f)).ToString() + "%  TPR:" + ((int)(OverallTPR * 100f)).ToString() + "%";
-
-            #endregion
-
-            aje.FARps0 = FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody);
-            aje.FARts0 = FlightGlobals.getExternalTemperature((float)vessel.altitude, vessel.mainBody) + 273.15f;
-
-            Environment = (((int)(aje.FARps0 * 100f)) / 100f).ToString() + "atm;" + (((int)(aje.FARts0 * 100f)) / 100f) + "K";
-
-            if (usePrat3Curve)
-            {
-                aje.prat[3] = aje.p3p2d = (double)(prat3Curve.Evaluate((float)aje.fsmach));
-            }
-            aje.u0d = part.vessel.srfSpeed * 3.6d;
-            OverallThrottle = vessel.ctrlState.mainThrottle * engine.thrustPercentage / 100f;
-            if (!useAB)
-            {
-
-                aje.comPute();
-                engine.SetThrust(((float)aje.forceNetlb) * 0.004448f);
-                engine.SetIsp((float)aje.isp);
-                Mode = "Cruise " + System.Convert.ToString((int)(OverallThrottle * 100f)) + "%";
+                engine.SetThrust(0);
+                engine.SetIsp(1000);
             }
             else
             {
-                if (OverallThrottle <= ABthreshold)
-                {
-                    engine.useEngineResponseTime = true;
-                    aje.abflag = 0;
-                    aje.comPute();
-                    engine.SetThrust(((float)aje.forceNetlb) * 0.004448f / ABthreshold);
-                    engine.SetIsp((float)aje.isp);
-                    Mode = "Cruise " + System.Convert.ToString((int)(OverallThrottle / ABthreshold * 100f)) + "%";
-                }
-                else
-                {
-                    // only allow instance response when already at max RPM; if the compressor is still spooling up, it's still spooling up.
-                    if(engine.currentThrottle > ABthreshold)
-                        engine.useEngineResponseTime = false;
-                    else
-                        engine.useEngineResponseTime = true;
-
-                    aje.abflag = 1;
-                    aje.tt7 = (OverallThrottle - ABthreshold) * (ABmax - ABmin) / (1 - ABthreshold) + ABmin;
-
-                    aje.comPute();
-                    engine.SetThrust(((float)aje.forceNetlb) * 0.004448f / OverallThrottle);
-                    engine.SetIsp((float)aje.isp * ABIspMult);
-                    Mode = "Afterburner " + System.Convert.ToString((int)((OverallThrottle - ABthreshold) / (1 - ABthreshold) * 100f)) + "%";
-                }
-
+                engine.SetThrust((float)aje.GetThrust() / 1000f / Arearatio);
+                engine.SetIsp((float)aje.GetIsp());
             }
-            Mode += " (" + (aje.forceGrosslb * 0.004448f).ToString("N2") + "kN gr)";
-
-
-
-
-            if (aje.fireflag > 0.9f && useOverheat)
+            float fireflag = (float)aje.GetT3()/maxT3;
+            if (fireflag > 0.9f )
             {
-                part.temperature = (aje.fireflag * 2f - 1.2f) * part.maxTemp;
+                part.temperature = (fireflag * 2f - 1.2f) * part.maxTemp;
+            }
+        }
 
+        //ferram4: separate out so function can be called separately for editor sims
+        public void UpdateInletEffects()
+        {
+            float EngineArea = 0, InletArea = 0;
+            OverallTPR = 0;
+
+            if (aje == null)
+                Debug.Log("HOW?!");
+            float M0 = (float)aje.GetM0();
+            
+            for (int j = 0; j < engineList.Count; j++)       
+            {
+                AJEModule e = engineList[j];
+                if(e)
+                {
+                    EngineArea += e.Area * (1 + e.BPR);
+                }
+            }
+                        
+            for (int j = 0; j < inletList.Count; j++)        
+            {
+                AJEInlet i = inletList[j];
+                if(i)
+                {
+                    InletArea += i.Area;
+                    OverallTPR += i.Area * i.cosine * i.cosine * i.GetTPR(M0);
+                }
+            }
+        
+            if (InletArea > 0)
+                OverallTPR /= InletArea;
+            Arearatio = Math.Min(InletArea / EngineArea, 1f);
+            Inlet = "Area:" + Arearatio.ToString("P2") + " TPR:" + OverallTPR.ToString("P2");
+
+        }
+
+        public void UpdateFlightCondition(double altitude, double vel, CelestialBody body)
+        {
+            double p0 = FlightGlobals.getStaticPressure(altitude, body);
+            double t0 = FlightGlobals.getExternalTemperature((float)altitude, body) + 273.15;
+
+            Environment = p0.ToString("N2") + " Atm;" + t0.ToString("N2") + " K ";
+            if (CPR != 1)
+            {     
+                float requiredThrottle = (int)(vessel.ctrlState.mainThrottle * engine.thrustPercentage); //0-100
+                float deltaT = (float)TimeWarp.fixedDeltaTime;
+                float throttleResponseRate = Mathf.Max(2 / Area / (1 + BPR), 5); //percent per second
+
+                float d = requiredThrottle - acturalThrottle;
+                if (Mathf.Abs(d) > throttleResponseRate * deltaT)
+                    acturalThrottle += Mathf.Sign(d) * throttleResponseRate * deltaT;
+            }
+            else // ramjet
+            {
+                acturalThrottle = (int)(vessel.ctrlState.mainThrottle * engine.thrustPercentage);
             }
 
-            fireflag = aje.fireflag;
-            parttemp = part.temperature;
-            maxtemp = part.maxTemp;
-
-
-            //           mach = (float)aje.fsmach;
-
-
+            aje.SetTPR(OverallTPR);
+            aje.CalculatePerformance(p0 * 101.3, t0, vel, (acturalThrottle + 1) / 100);
+            
         }
 
 
     }
-
-
 }
 
