@@ -132,7 +132,7 @@ namespace AJE
             }
             else
             {
-                engine.SetThrust((float)aje.GetThrust() / 1000f / Arearatio);
+                engine.SetThrust((float)aje.GetThrust() / 1000f * Arearatio);
                 engine.SetIsp((float)aje.GetIsp());
             }
             float fireflag = (float)aje.GetT3()/maxT3;
