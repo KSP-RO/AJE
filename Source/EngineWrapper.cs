@@ -51,27 +51,27 @@ namespace AJE
 
         public void SetIsp(float isp)
         {
-            if (isp <= 0)
-                return;
-            FloatCurve resultcurve = new FloatCurve();
-            this.realIsp = isp;
-            isp = isp * IspMultiplier;
-            resultcurve.Add(0, isp);
-            resultcurve.Add(1, isp); 
-            
-            switch (type)
+            if (isp > 0)
             {
-                case EngineType.ModuleEngine:
-                    engine.atmosphereCurve = resultcurve;
-                    break;
-                case EngineType.ModuleEngineFX:
-                    engineFX.atmosphereCurve = resultcurve;
-                    break;
-                case EngineType.FSengine:
- //                   fsengine.fuelConsumption = "0,0.0001;1," + (fsengine.maxThrust * 1000f / 9.801f / isp).ToString();
-                    break;
+                FloatCurve resultcurve = new FloatCurve();
+                this.realIsp = isp;
+                isp = isp * IspMultiplier;
+                resultcurve.Add(0, isp);
+                resultcurve.Add(1, isp);
+
+                switch (type)
+                {
+                    case EngineType.ModuleEngine: 
+                        engine.atmosphereCurve = resultcurve;
+                        break;
+                    case EngineType.ModuleEngineFX:
+                        engineFX.atmosphereCurve = resultcurve;
+                        break;
+                    case EngineType.FSengine:
+                        //                   fsengine.fuelConsumption = "0,0.0001;1," + (fsengine.maxThrust * 1000f / 9.801f / isp).ToString();
+                        break;
+                }
             }
-      
         }
 
         public void SetThrust(float t)
