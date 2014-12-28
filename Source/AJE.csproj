@@ -12,6 +12,9 @@
   <PropertyGroup>
     <RootNamespace>AJE</RootNamespace>
   </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyName>AJE</AssemblyName>
+  </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>none</DebugType>
@@ -36,7 +39,8 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>D:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="FerramAerospaceResearch">
+    <Reference Include="FerramAerospaceResearch, Version=0.14.5.1, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>D:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\FerramAerospaceResearch\Plugins\FerramAerospaceResearch.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">

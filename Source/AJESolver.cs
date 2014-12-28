@@ -159,7 +159,7 @@ namespace AJE
                 T2 = T1 * Math.Pow(prat2, (gamma_c - 1) / gamma_c / eta_c); //fan
                 T3 = T1 * Math.Pow(prat3, (gamma_c - 1) / gamma_c / eta_c); //compressor
 
-                T4 = (Tt4 - T3 * 1.2) * mainThrottle + T3 * 1.2;    //burner
+                T4 = (Tt4 - T3) * mainThrottle + T3;    //burner
                 P4 = P3;
                 ff = Cp_c * (T4 - T3) / (Cp_c * (T4 - T3) + h_f);//fuel fraction
 

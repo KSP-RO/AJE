@@ -136,9 +136,9 @@ namespace AJE
                 engine.SetIsp((float)aje.GetIsp());
             }
             float fireflag = (float)aje.GetT3()/maxT3;
-            if (fireflag > 0.9f )
+            if (fireflag > 0.8f )
             {
-                part.temperature = (fireflag * 2f - 1.2f) * part.maxTemp;
+                part.temperature = (fireflag * 2f - 1f) * part.maxTemp;
             }
         }
 
