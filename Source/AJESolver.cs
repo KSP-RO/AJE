@@ -251,7 +251,7 @@ namespace AJE
             }
 
 
-            thrust -= mdot * (1 + (exhaustMixer ? 0 : BPR)) * (velocity);//ram drag
+            thrust -= mdot * (1 - ff_ab) * (1 + (exhaustMixer ? 0 : BPR)) * (velocity);//ram drag
 
             Isp = thrust / (mdot * ff_ab * 9.81);
           /*  
