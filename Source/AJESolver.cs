@@ -247,7 +247,7 @@ namespace AJE
                 double snpr = P2 / p0;
                 double ues = Math.Sqrt(2.0 * R_c / fac1 * T2 * eta_n * (1.0 - Math.Pow(1.0 / snpr, fac1)));
                 double pfexit = (snpr <= 1.893) ? p0 : .52828 * P2; //exit pressure of fan 
-                thrust += BPR * ues * mdot + (pfexit - p0) * BPR * Aref;
+                thrust += BPR * ues * mdot * (1 - ff_ab) + (pfexit - p0) * BPR * Aref;
             }
 
 
