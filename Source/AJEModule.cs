@@ -48,6 +48,11 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = true)]
         public String Environment;
 
+#IFDEF _DEBUG
+        [KSPField(isPersistant = false, guiActive = true)]
+        public int Iterations;
+#ENDIF
+
         public AJESolver aje;
         public EngineWrapper engine;
         float acturalThrottle = 0;
@@ -140,6 +145,10 @@ namespace AJE
             {
                 part.temperature = (fireflag * 2f - 1f) * part.maxTemp;
             }
+
+#IFDEF _DEBUG
+            Iterations = aje.GetIterations();
+#ENDIF
         }
 
         //ferram4: separate out so function can be called separately for editor sims
