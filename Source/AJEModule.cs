@@ -1,8 +1,11 @@
-﻿using System;
+﻿using KSP;
+using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Linq;
+using System.Text;
 using UnityEngine;
-using KSP;
+using System.Reflection;
 
 namespace AJE
 {
@@ -63,8 +66,9 @@ namespace AJE
             engine.IspMultiplier = 1f;
             engine.useVelocityCurve = false;
             engine.ThrustUpperLimit = maxThrust;
-            part.maxTemp = 1800;
-            if (TIT > 0)
+ //           bool DREactive = AssemblyLoader.loadedAssemblies.Any(
+ //               a => a.assembly.GetName().Name.Equals("DeadlyReentry.dll", StringComparison.InvariantCultureIgnoreCase));
+            if (TIT > part.maxTemp)
                 part.maxTemp = TIT;
             engine.heatProduction = part.maxTemp * 0.1f;
             aje = new AJESolver();
