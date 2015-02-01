@@ -1,0 +1,3 @@
+D:\Users\Joey D Wong\Documents\GitHub\AJE\Source\obj\Release\AJE.csprojResolveAssemblyReference.cache
+D:\Users\Joey D Wong\Documents\GitHub\AJE\GameData\AJE\Plugins\AJE.dll
+D:\Users\Joey D Wong\Documents\GitHub\AJE\Source\obj\Release\AJE.dll
