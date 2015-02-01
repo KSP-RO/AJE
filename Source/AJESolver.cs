@@ -68,11 +68,6 @@ namespace AJE
         //use exhaust mixer or not
         private bool exhaustMixer;
 
-        //How many iterations it takes prat3 to converge
-#IFDEF _DEBUG
-        private int compressorIterations;
-#ENDIF
-
         public string debugstring;
         //---------------------------------------------------------
         //Initialization Functions
@@ -157,11 +152,6 @@ namespace AJE
             double prat2 = FPR;
             double k = FPR / CPR;
             double p = Math.Pow(k, (gamma_c - 1) / eta_c / gamma_c);
-
-#IFDEF _DEBUG
-            compressorIterations = 20;
-#ENDIF
-
             for (int i = 0; i < 20; i++)    //use iteration to calculate CPR
             {
                 P2 = prat2 * P1;
@@ -184,16 +174,8 @@ namespace AJE
                 prat2 = k * prat3;
 
                 if (Math.Abs(x - prat3) < 0.01)
-                {
-#IFDEF _DEBUG
-                    compressorIterations = i + 1;
-#ENDIF
                     break;
-                }
             }
-
-            if (compressorIterations == 20)
-                Debug.Log("Warning: AJE Compressor Parameters failed to converge in 20 iterations.");
 
             gamma_t = CalculateGamma(T5, ff);//gas parameters
             Cp_t = CalculateCp(T5, ff);
@@ -299,11 +281,6 @@ namespace AJE
         public double GetIsp() { return Isp; }
         public double GetT3() { return T3; }
         public double GetM0() { return M0; }
-
-#IFDEF _DEBUG
-        public int GetIterations() { return compressorIterations;  }
-#ENDIF
-
         private double CalculateGamma(double temperature, double fuel_fraction)
         {
             double gamma = 1.4 - 0.1 * Math.Max((temperature - 300) * 0.0005, 0) * (1 + fuel_fraction);
