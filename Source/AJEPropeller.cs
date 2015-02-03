@@ -241,11 +241,13 @@ namespace AJE
             pressure = FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody) * 101325f; // include dynamic pressure
             float dynPressure = 0.5f * (float)density * v * v;
             temperature = FlightGlobals.getExternalTemperature((float)vessel.altitude, vessel.mainBody) + CTOK;
-
-            pistonengine.calc((float)pressure + dynPressure * ramAir, temperature, omega * PistonEngine.RPM2RADPS / gearratio, vessel.ctrlState.mainThrottle);
+            float acturalThrottle = (int)(vessel.ctrlState.mainThrottle * engine.thrustPercentage) / 100f;
+            if (acturalThrottle < 0.1f)
+                acturalThrottle = 0.1f;
+            pistonengine.calc((float)pressure + dynPressure * ramAir, temperature, omega * PistonEngine.RPM2RADPS / gearratio, acturalThrottle);
             if (!useOxygen)
             {
-                pistonengine._power = power * PistonEngine.HP2W * vessel.ctrlState.mainThrottle;
+                pistonengine._power = power * PistonEngine.HP2W * acturalThrottle;
                 //pistonengine._torque = power * PistonEngine.HP2W / (omega * PistonEngine.RPM2RADPS);
             }
             double shaftHP = pistonengine._power / PistonEngine.HP2W;
@@ -284,7 +286,7 @@ namespace AJE
             float thrustOut = thrust + netExhaustThrust + netMeredithEffect;
 
             // set minthrust to maxthrust
-            if (vessel.ctrlState.mainThrottle == 0)
+            if (acturalThrottle == 0)
                 engine.idle = 0f;
             else
                 engine.idle = 1.0f;
