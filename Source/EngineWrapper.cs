@@ -87,7 +87,8 @@ namespace AJE
             {
                 this.maxThrust = 0.0001f;
             }
-            this.minThrust = this.maxThrust * idle;
+            this.finalThrust = this.maxThrust * idle;
+            this.maxThrust = this.maxThrust / this.currentThrottle;
         }
 
         public float maxThrust
@@ -135,6 +136,24 @@ namespace AJE
                         break;
                     case EngineType.ModuleEngineFX:
                         engineFX.minThrust = value;
+                        break;
+                    case EngineType.FSengine:
+                        break;
+                }
+            }
+        }
+
+        public float finalThrust
+        {
+            set
+            {
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        engine.finalThrust = value;
+                        break;
+                    case EngineType.ModuleEngineFX:
+                        engineFX.finalThrust = value;
                         break;
                     case EngineType.FSengine:
                         break;
