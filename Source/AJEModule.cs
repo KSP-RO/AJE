@@ -50,17 +50,17 @@ namespace AJE
         public float maxT3 = 9999;
         [KSPField(isPersistant = false, guiActive = true)]
         public String Environment;
+        [KSPField(isPersistant = true, guiActive = false)]
+        public float actualThrottle = 0;
 
         public AJESolver aje;
         public EngineWrapper engine;
-        float acturalThrottle = 0;
         public List<AJEModule> engineList;
         public List<AJEInlet> inletList;
         public float OverallTPR = 1, Arearatio = 1;
         public void Start()
         {
             Need_Area = Area * (1 + BPR);
-            acturalThrottle = 0;
             engine = new EngineWrapper(part);
             engine.idle = 1f;
             engine.IspMultiplier = 1f;
@@ -194,17 +194,19 @@ namespace AJE
                 float deltaT = (float)TimeWarp.fixedDeltaTime;
                 float throttleResponseRate = Mathf.Max(2 / Area / (1 + BPR), 5); //percent per second
 
-                float d = requiredThrottle - acturalThrottle;
+                float d = requiredThrottle - actualThrottle;
                 if (Mathf.Abs(d) > throttleResponseRate * deltaT)
-                    acturalThrottle += Mathf.Sign(d) * throttleResponseRate * deltaT;
+                    actualThrottle += Mathf.Sign(d) * throttleResponseRate * deltaT;
+                else
+                    actualThrottle = requiredThrottle;
             }
             else // ramjet
             {
-                acturalThrottle = (int)(vessel.ctrlState.mainThrottle * engine.thrustPercentage);
+                actualThrottle = (int)(vessel.ctrlState.mainThrottle * engine.thrustPercentage);
             }
 
             aje.SetTPR(OverallTPR);
-            aje.CalculatePerformance(p0 * 101.3, t0, vel, (acturalThrottle + 1) / 100);
+            aje.CalculatePerformance(p0 * 101.3, t0, vel, (actualThrottle + 1) / 100);
             
         }
 
