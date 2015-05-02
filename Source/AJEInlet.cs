@@ -47,7 +47,7 @@ namespace AJE
         {
             if (HighLogic.LoadedSceneIsEditor)
                 return;
-            if (vessel.mainBody.atmosphereContainsOxygen == false || part.vessel.altitude > vessel.mainBody.maxAtmosphereAltitude)
+            if (vessel.mainBody.atmosphereContainsOxygen == false || part.vessel.altitude > vessel.mainBody.atmosphereDepth)
             {
                 return;
             }

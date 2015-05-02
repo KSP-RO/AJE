@@ -64,13 +64,17 @@ namespace AJE
             engine = new EngineWrapper(part);
             engine.idle = 1f;
             engine.IspMultiplier = 1f;
-            engine.useVelocityCurve = false;
+            engine.atmChangeFlow = false;
+            engine.useVelCurve = false;
+            engine.useAtmCurve = false;
+            engine.machLimit = 99999;
+		    engine.machHeatMult = 1;
             engine.ThrustUpperLimit = maxThrust;
  //           bool DREactive = AssemblyLoader.loadedAssemblies.Any(
  //               a => a.assembly.GetName().Name.Equals("DeadlyReentry.dll", StringComparison.InvariantCultureIgnoreCase));
             if (TIT > part.maxTemp)
                 part.maxTemp = TIT;
-            engine.heatProduction = part.maxTemp * 0.1f;
+   //         engine.heatProduction = (float)part.maxTemp * 0.1f;
             aje = new AJESolver();
             aje.InitializeOverallEngineData(
                 Area,
@@ -120,9 +124,9 @@ namespace AJE
                 return;
             if (engine.type == EngineWrapper.EngineType.NONE || !engine.EngineIgnited)
                 return;
-            if (vessel.mainBody.atmosphereContainsOxygen == false || part.vessel.altitude > vessel.mainBody.maxAtmosphereAltitude)
+            if (vessel.mainBody.atmosphereContainsOxygen == false || part.vessel.altitude > vessel.mainBody.atmosphereDepth)
             {
-                engine.SetThrust(0);
+                engine.SetEngineParams(0, 1000);
                 return;
             }
 
@@ -131,13 +135,16 @@ namespace AJE
 
             if(CPR == 1 && aje.GetM0()<0.3)//ramjet
             {
-                engine.SetThrust(0);
-                engine.SetIsp(1000);
+                engine.SetEngineParams(0, 1000);
             }
             else
             {
-                engine.SetThrust((float)aje.GetThrust() / 1000f * Arearatio);
-                engine.SetIsp((float)aje.GetIsp());
+                float t = (float)aje.GetThrust() / 1000f * Arearatio; //in kN
+                float isp = (float)aje.GetIsp();
+                float ff = t / 9.801f / isp;
+                engine.SetEngineParams(ff, isp);
+   //             engine.SetThrust((float)aje.GetThrust() / 1000f * Arearatio);
+   //             engine.SetIsp((float)aje.GetIsp());
             }
             float fireflag = (float)aje.GetT3()/maxT3;
             if (fireflag > 0.8f )
@@ -184,10 +191,10 @@ namespace AJE
 
         public void UpdateFlightCondition(double altitude, double vel, CelestialBody body)
         {
-            double p0 = FlightGlobals.getStaticPressure(altitude, body);
-            double t0 = FlightGlobals.getExternalTemperature((float)altitude, body) + 273.15;
+            double p0 = FlightGlobals.getStaticPressure(altitude, body);//in Kpa
+            double t0 = FlightGlobals.getExternalTemperature(altitude, body);//in Kelvin
+            Environment = p0.ToString("N2") + " Kpa;" + t0.ToString("N2") + " K ";
 
-            Environment = p0.ToString("N2") + " Atm;" + t0.ToString("N2") + " K ";
             if (CPR != 1)
             {     
                 float requiredThrottle = (int)(vessel.ctrlState.mainThrottle * engine.thrustPercentage); //0-100
@@ -206,7 +213,7 @@ namespace AJE
             }
 
             aje.SetTPR(OverallTPR);
-            aje.CalculatePerformance(p0 * 101.3, t0, vel, (actualThrottle + 1) / 100);
+            aje.CalculatePerformance(p0, t0, vel, (actualThrottle + 1) / 100);
             
         }
 

@@ -156,7 +156,8 @@ namespace AJE
             engine = new EngineWrapper(part);
             engine.IspMultiplier = IspMultiplier;
             engine.idle = idle;
-            engine.useVelocityCurve = false;
+            engine.useVelCurve = false;
+            engine.useAtmCurve = false;
             engine.ThrustUpperLimit = maxThrust;
             engine.useEngineResponseTime = false;
 
@@ -226,9 +227,9 @@ namespace AJE
                 return;
             if (engine.type == EngineWrapper.EngineType.NONE || !engine.EngineIgnited)
                 return;
-            if ((!vessel.mainBody.atmosphereContainsOxygen && useOxygen) || part.vessel.altitude > vessel.mainBody.maxAtmosphereAltitude)
+            if ((!vessel.mainBody.atmosphereContainsOxygen && useOxygen) || part.vessel.altitude > vessel.mainBody.atmosphereDepth)
             {
-                engine.SetThrust(0);
+                engine.SetEngineParams(0, 1000);
                 return;
             }
             // for RPM handling - bool throttleCut = (object)vessel != null && vessel.ctrlState.mainThrottle <= 0;
@@ -236,11 +237,13 @@ namespace AJE
             pistonengine._mixture = mixture;
             pistonengine._volEfficMult = VolETweak;
 
-            density = ferram4.FARAeroUtil.GetCurrentDensity(part.vessel, out speedOfSound);
+            temperature = (float)FlightGlobals.getExternalTemperature(vessel.altitude, vessel.mainBody);
+            pressure = FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody); // include dynamic pressure
+            density = FlightGlobals.getAtmDensity(pressure, temperature,vessel.mainBody);
             v = Vector3.Dot(vessel.srf_velocity, -part.FindModelTransform(engine.thrustVectorTransformName).forward.normalized);
-            pressure = FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody) * 101325f; // include dynamic pressure
+            pressure *= 1000f;//kpa to pa
+
             float dynPressure = 0.5f * (float)density * v * v;
-            temperature = FlightGlobals.getExternalTemperature((float)vessel.altitude, vessel.mainBody) + CTOK;
             float acturalThrottle = (int)(vessel.ctrlState.mainThrottle * engine.thrustPercentage) / 100f;
             if (acturalThrottle < 0.1f)
                 acturalThrottle = 0.1f;
@@ -299,9 +302,9 @@ namespace AJE
             }
             // thrust in kgf divided by kg mdot
             isp = thrustOut * 1000 / 9.80665f / fuelFlow;
-            engine.SetThrust(thrustOut);
-            engine.SetIsp(isp);
-
+       //     engine.SetThrust(thrustOut);
+     //       engine.SetIsp(isp);
+            engine.SetEngineParams(fuelFlow/1000, isp);
             //Vector3d v1 = part.FindModelTransform("thrustTransform").forward;
             //v1 = vessel.ReferenceTransform.InverseTransformDirection(v1)*100;
             //Vector3d v2 = vessel.srf_velocity;

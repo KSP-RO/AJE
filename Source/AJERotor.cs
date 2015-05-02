@@ -52,7 +52,8 @@ namespace AJE
             engine = new EngineWrapper(part);
             engine.IspMultiplier = IspMultiplier;
             engine.idle = idle;
-            engine.useVelocityCurve = false;
+            engine.useVelCurve = false;
+            engine.useAtmCurve = false;
             engine.ThrustUpperLimit = maxThrust;
             float omega = rpm * 0.1047f;
 //            power *= 745.7f;
@@ -69,9 +70,9 @@ namespace AJE
                 return;
             if (engine.type == EngineWrapper.EngineType.NONE || !engine.EngineIgnited)
                 return;
-            if ((!vessel.mainBody.atmosphereContainsOxygen && useOxygen) || part.vessel.altitude > vessel.mainBody.maxAtmosphereAltitude)
+            if ((!vessel.mainBody.atmosphereContainsOxygen && useOxygen) || part.vessel.altitude > vessel.mainBody.atmosphereDepth)
             {
-                engine.SetThrust(0);
+                engine.SetEngineParams(0, 1000);
                 return;
             }
 
@@ -84,15 +85,17 @@ namespace AJE
 
 
 
-            float density = (float)ferram4.FARAeroUtil.GetCurrentDensity(part.vessel.mainBody, (float)part.vessel.altitude);
+            float pressure = (float)FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody); // include dynamic pressure
+            float temperature = (float)FlightGlobals.getExternalTemperature((float)vessel.altitude, vessel.mainBody);
+            float density = (float)FlightGlobals.getAtmDensity(pressure, temperature, vessel.mainBody);
 
             aje.calc(density, vx, vz, weight*9.801f);
 
 
-            engine.SetThrust(aje.lift / 1000f);
+     //       engine.SetThrust(aje.lift / 1000f);
             float isp = aje.lift / 9.801f / BSFC / aje.power;
-            engine.SetIsp(isp);
-
+     //       engine.SetIsp(isp);
+            engine.SetEngineParams(aje.lift / 1000 / 9.801f / isp, isp);
             ShaftPower = ((int)(aje.power / 745.7f)).ToString() + "HP";
 
             if (sas != null)

@@ -49,15 +49,45 @@ namespace AJE
             Debug.Log("EngineWrapper: engine type is " + type.ToString());
         }
 
+        public void SetEngineParams(float fuelflow, float isp)
+        {
+            if (isp > 0)
+            {
+                FloatCurve resultcurve = new FloatCurve();
+                this.realIsp = isp * IspMultiplier;
+                resultcurve.Add(0, isp * IspMultiplier, 0, 0);
+
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        engine.atmosphereCurve = resultcurve;
+                        break;
+                    case EngineType.ModuleEngineFX:
+                        engineFX.atmosphereCurve = resultcurve;
+                        break;
+                    case EngineType.FSengine:
+                        //                   fsengine.fuelConsumption = "0,0.0001;1," + (fsengine.maxThrust * 1000f / 9.801f / isp).ToString();
+                        break;
+                }
+            }
+
+            if (fuelflow > 0)
+            {
+                this.maxFuelFlow = fuelflow;
+            }
+            else
+            {
+                this.maxFuelFlow = 0.00000001f;
+            }
+
+        }
         public void SetIsp(float isp)
         {
             if (isp > 0)
             {
                 FloatCurve resultcurve = new FloatCurve();
-                this.realIsp = isp;
-                isp = isp * IspMultiplier;
-                resultcurve.Add(0, isp);
-                resultcurve.Add(1, isp);
+                this.realIsp = isp * IspMultiplier;
+                resultcurve.Add(0, isp * IspMultiplier, 0, 0);
 
                 switch (type)
                 {
@@ -71,6 +101,9 @@ namespace AJE
                         //                   fsengine.fuelConsumption = "0,0.0001;1," + (fsengine.maxThrust * 1000f / 9.801f / isp).ToString();
                         break;
                 }
+
+
+
             }
         }
 
@@ -87,9 +120,45 @@ namespace AJE
             {
                 this.maxThrust = 0.0001f;
             }
-            this.finalThrust = this.maxThrust * idle;
+ //           this.finalThrust = this.maxThrust * idle;
             this.maxThrust = this.maxThrust / this.currentThrottle;
+            
         }
+
+
+        public float maxFuelFlow
+        {
+            get
+            {
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        return engine.maxFuelFlow;
+                    case EngineType.ModuleEngineFX:
+                        return engineFX.maxFuelFlow;
+                    case EngineType.FSengine:
+                    //                     return fsengine.maxFuelFlow;
+                    default:
+                        return 0f;
+                }
+            }
+            set
+            {
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        engine.maxFuelFlow = value;
+                        break;
+                    case EngineType.ModuleEngineFX:
+                        engineFX.maxFuelFlow = value;
+                        break;
+                    case EngineType.FSengine:
+                        //                     fsengine.maxFuelFlow = value;
+                        break;
+                }
+            }
+        }
+
 
         public float maxThrust
         {
@@ -142,6 +211,43 @@ namespace AJE
                 }
             }
         }
+        public float machLimit
+        {
+
+            set
+            {
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        engine.machLimit = value;
+                        break;
+                    case EngineType.ModuleEngineFX:
+                        engineFX.machLimit = value;
+                        break;
+                    case EngineType.FSengine:
+                        break;
+                }
+            }
+        }
+        public float machHeatMult
+        {
+
+            set
+            {
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        engine.machHeatMult = value;
+                        break;
+                    case EngineType.ModuleEngineFX:
+                        engineFX.machHeatMult = value;
+                        break;
+                    case EngineType.FSengine:
+                        break;
+                }
+            }
+        }
+
 
         public float finalThrust
         {
@@ -328,23 +434,58 @@ namespace AJE
             }
         }
 
-        public bool useVelocityCurve
+        public bool atmChangeFlow
         {
             set
             {
                 switch (type)
                 {
                     case EngineType.ModuleEngine:
-                        engine.useVelocityCurve = value;
+                        engine.atmChangeFlow = value;
                         break;
                     case EngineType.ModuleEngineFX:
-                        engineFX.useVelocityCurve = value;
+                        engineFX.atmChangeFlow = value;
                         break;
                     case EngineType.FSengine:
                         break;
                 }
             }
         }
+        public bool useVelCurve
+        {
+            set
+            {
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        engine.useVelCurve = value;
+                        break;
+                    case EngineType.ModuleEngineFX:
+                        engineFX.useVelCurve = value;
+                        break;
+                    case EngineType.FSengine:
+                        break;
+                }
+            }
+        }
+        public bool useAtmCurve
+        {
+            set
+            {
+                switch (type)
+                {
+                    case EngineType.ModuleEngine:
+                        engine.useAtmCurve = value;
+                        break;
+                    case EngineType.ModuleEngineFX:
+                        engineFX.useAtmCurve = value;
+                        break;
+                    case EngineType.FSengine:
+                        break;
+                }
+            }
+        }
+
         public float engineAccelerationSpeed
         {
             set
