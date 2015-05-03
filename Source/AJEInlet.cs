@@ -17,20 +17,24 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = true)]
         public double cosine = 1d;
 
-        private Transform intakeTransform = null; // replaces original
+        // replace some original things
+        protected Transform intakeTransform = null;
+        new public float airFlow = 0f;
+        new public float intakeDrag;
+        new public float airSpeedGui;
 
-        public float GetTPR(float Mach)
+        public double GetTPR(double Mach)
         {
             if (useTPRCurve)
             {
-                return TPRCurve.Evaluate(Mach);
+                return (double)TPRCurve.Evaluate((float)Mach);
             }
             else
             {
-                if(Mach<=1f)
-                    return 1f;
+                if(Mach<=1d)
+                    return 1d;
                 else
-                    return 1.0f - .075f * Mathf.Pow(Mach - 1.0f, 1.35f); 
+                    return 1.0d - .075d * Math.Pow(Mach - 1.0d, 1.35d); 
             }
 
         }
@@ -44,8 +48,9 @@ namespace AJE
             }
         }
 
-        public void FixedUpdate()
+        new public void FixedUpdate()
         {
+            base.FixedUpdate();
             if (HighLogic.LoadedSceneIsEditor)
                 return;
             if (vessel.mainBody.atmosphereContainsOxygen == false || part.vessel.altitude > vessel.mainBody.atmosphereDepth)
@@ -68,6 +73,16 @@ namespace AJE
 
                 cosine = Math.Max(realcos, fakecos); //by Virindi
             }
+        }
+
+        public override string GetInfo()
+        {
+            string output = "";
+
+            output += "<b>Intake Resource: </b>" + resourceName + "\n";
+            output += "<b>Intake Area: </b>" + (Area).ToString("N4") + " m^2";
+
+            return output;
         }
 
     }

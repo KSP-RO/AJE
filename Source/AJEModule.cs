@@ -11,7 +11,7 @@ namespace AJE
 {
 
 
-    public class ModuleEnginesAJEJet : ModuleEnginesFX
+    public class ModuleEnginesAJEJet : ModuleEnginesFX, IModuleInfo
     {
         [KSPField(isPersistant = false, guiActive = false)]
         public float Area = 0.1f;
@@ -45,39 +45,37 @@ namespace AJE
         [KSPField(isPersistant = false, guiActiveEditor = true)]
         public float Need_Area;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float maxThrust = 999999;
-        [KSPField(isPersistant = false, guiActive = false)]
         public float maxT3 = 9999;
         [KSPField(isPersistant = false, guiActive = true)]
         public String Environment;
-        [KSPField(isPersistant = true, guiActive = false)]
-        public float actualThrottle = 0;
+
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Current Throttle", guiUnits = "%")]
+        public int actualThrottle;
+
+        [KSPField(isPersistant = false)]
+        public double thrustUpperLimit = double.MaxValue;
 
         // engine temp stuff
         [KSPField(isPersistant = false, guiActive = true, guiName = "Engine Temp", guiUnits = " K")]
         public float engineTemp = 0f;
         protected VInfoBox overheatBox = null;
 
-        // overrides from ModuleEngines
-        [KSPField(guiActive = true, guiName = "Fuel Flow", guiUnits = "kg/sec", guiFormat = "F5")]
-        new public float fuelFlowGui;
 
-        public AJESolver aje;
+        public AJESolver aje = null;
         public List<ModuleEnginesAJEJet> engineList;
         public List<AJEInlet> inletList;
-        public double OverallTPR = 1, Arearatio = 1;
+        public double OverallTPR = 1d, Arearatio = 1d;
+
+        protected int partsCount = 0;
 
         private const double invg0 = 1d / 9.80665d;
-        public void Start()
+
+        public void CreateEngine()
         {
             Need_Area = Area * (1 + BPR);
-            
-            ThrustUpperLimit = maxThrust;
- //           bool DREactive = AssemblyLoader.loadedAssemblies.Any(
- //               a => a.assembly.GetName().Name.Equals("DeadlyReentry.dll", StringComparison.InvariantCultureIgnoreCase));
-            if (TIT > part.maxTemp)
-                part.maxTemp = TIT;
-   //         heatProduction = (float)part.maxTemp * 0.1f;
+            //           bool DREactive = AssemblyLoader.loadedAssemblies.Any(
+            //               a => a.assembly.GetName().Name.Equals("DeadlyReentry.dll", StringComparison.InvariantCultureIgnoreCase));
+            //         heatProduction = (float)part.maxTemp * 0.1f;
             aje = new AJESolver();
             aje.InitializeOverallEngineData(
                 Area,
@@ -105,53 +103,112 @@ namespace AJE
             {           //It's not like there's anything in a ramjet to spool, now is there?
                 useEngineResponseTime = false;
             }
-            engineList.Clear();
-            inletList.Clear();
-            for (int j = 0; j < vessel.parts.Count; j++)        //reduces garbage produced compared to foreach due to Unity Mono issues
+        }
+        public void Start()
+        {
+            useAtmCurve = atmChangeFlow = useVelCurve = false;
+            CreateEngine();
+            
+            List<Part> parts = null;
+            if(HighLogic.LoadedSceneIsEditor)
+                parts = EditorLogic.fetch.getSortedShipList();
+            else if(HighLogic.LoadedSceneIsFlight)
+                parts = vessel.Parts;
+            if (parts != null)
             {
-                Part p = vessel.parts[j];
-                if (p.Modules.Contains("AJEModule"))
-                {
-                    engineList.Add((ModuleEnginesAJEJet)p.Modules["AJEModule"]);          //consider storing list of affected AJEModules and AJEInlets, perhaps a single one for each vessel.  Would result in better performance     
-                }
-                if (p.Modules.Contains("AJEInlet"))
-                {
-                    inletList.Add((AJEInlet)p.Modules["AJEInlet"]); 
-                }
+                partsCount = parts.Count;
+                GetLists(parts);
             }
+            currentThrottle = 0f;
+            // hack to get around my not making CanStart() virtual
+            CLAMP = float.MaxValue;
+            flameoutBar = 0f;
+            flameout = false;
+            Fields["fuelFlowGui"].guiUnits = " kg/sec";
+        }
 
+        public override void OnStart(PartModule.StartState state)
+        {
+            base.OnStart(state);
+            // hack to get around my not making CanStart() virtual
+            CLAMP = float.MaxValue;
+            flameoutBar = 0f;
+            flameout = false;
             // set initial params
             engineTemp = 288.15f;
+            currentThrottle = 0f;
+        }
+
+        public override void OnLoad(ConfigNode node)
+        {
+            base.OnLoad(node);
+            useAtmCurve = atmChangeFlow = useVelCurve = false;
+        }
+
+        public void Update()
+        {
+            if (HighLogic.LoadedSceneIsEditor)
+            {
+                List<Part> parts = EditorLogic.fetch.getSortedShipList();
+                int newCount = parts.Count;
+                if(newCount != partsCount)
+                {
+                    partsCount = newCount;
+                    GetLists(parts);
+                }
+            }
         }
               
-        public void FixedUpdate()
+        new public void FixedUpdate()
         {
+            realIsp = 0f;
+            finalThrust = 0f;
+            fuelFlowGui = 0f;
+            requestedThrottle = 0f;
+
+            // hack to get around my not making CanStart() virtual
+            CLAMP = float.MaxValue;
+            flameoutBar = 0f;
+
             if (HighLogic.LoadedSceneIsEditor || TimeWarping())
             {
-                realIsp = 1f;
-                finalThrust = 0f;
+                currentThrottle = 0f;
                 return;
             }
+
+            // update our links
+            List<Part> parts = vessel.Parts;
+            int newCount = parts.Count;
+            if(newCount != partsCount)
+            {
+                partsCount = newCount;
+                GetLists(parts);
+            }
+
             if (EngineIgnited)
             {
                 UpdatePropellantStatus();
                 if (vessel.mainBody.atmosphereContainsOxygen && vessel.altitude <= vessel.mainBody.atmosphereDepth)
                 {
                     UpdateInletEffects();
-                    UpdateFlightCondition(vessel.altitude, part.vessel.srfSpeed, vessel.mainBody);
+                    requestedThrottle = vessel.ctrlState.mainThrottle;
+                    UpdateThrottle();
+                    UpdateFlightCondition(vessel.altitude, vessel.srfSpeed, vessel.staticPressurekPa, vessel.externalTemperature);
+
                     double thrustOut = 0d;
-                    if (CPR == 1 && aje.GetM0() < 0.3)//ramjet
-                    {
-                        realIsp = 1f;
-                    }
+                    if (CPR != 1 || aje.GetM0() >= 0.3)//ramjet check
+                        thrustOut = CalculateEngineParams();
                     else
                     {
-                        thrustOut = CalculateThrustParams();
+                        Flameout("Speed too low");
                     }
+
                     finalThrust = (float)thrustOut * vessel.VesselValues.EnginePower.value;
 
                     // Heat
-                    double fireflag = aje.GetT3() / maxT3;
+                    double dEngineTemp = aje.GetT3();
+                    engineTemp = (float)dEngineTemp;
+                    double fireflag = dEngineTemp / maxT3;
                     if (fireflag >= 0.79999d)
                     {
                         if (fireflag > 1d)
@@ -174,7 +231,62 @@ namespace AJE
                     {
                         overheatBox = null;
                     }
+
+                    if (finalThrust > 0f)
+                    {
+                        // hack to get around my not making CanStart() virtual
+                        CLAMP = float.MaxValue;
+                        flameoutBar = 0f;
+
+                        // now apply the thrust
+                        if (part.Rigidbody != null)
+                        {
+                            int tCount = thrustTransforms.Count;
+                            float thrustPortion = finalThrust / tCount;
+                            Transform t;
+                            for (int i = 0; i < tCount; ++i)
+                            {
+                                t = thrustTransforms[i];
+                                part.Rigidbody.AddForceAtPosition(-t.forward * thrustPortion, t.position, ForceMode.Force); //Send thrust equally to all nozzles.
+                            }
+                        }
+                        EngineExhaustDamage();
+
+                        double thermalFlux = fireflag * heatProduction * vessel.VesselValues.HeatProduction.value * PhysicsGlobals.InternalHeatProductionFactor * part.thermalMass;
+                        part.AddThermalFlux(thermalFlux);
+                    }
                 }
+                else
+                {
+                    Flameout("No oxygen");
+                }
+            }
+            else
+            {
+
+                // Update Gui information
+                Events["Shutdown"].active = false;
+                Events["Activate"].active = true;
+                fuelFlowGui = 0f; // No fuel is flowing, zero out gui values
+                realIsp = 0f;
+                finalThrust = 0f;
+
+                if (part.ShieldedFromAirstream)
+                {
+                    status = "Occluded";
+                }
+                else
+                {
+                    status = "Off";
+                }
+                statusL2 = "";
+            }
+            FXUpdate();
+            if (flameout || !EngineIgnited)
+            {
+                // hack to get around my not making CanStart() virtual
+                CLAMP = 0.0001f;
+                flameoutBar = float.MaxValue;
             }
         }
 
@@ -185,13 +297,16 @@ namespace AJE
             OverallTPR = 0;
 
             if (aje == null)
+            {
                 Debug.Log("HOW?!");
+                return;
+            }
             double M0 = aje.GetM0();
             int eCount = engineList.Count;
             for (int j = 0; j < eCount; ++j)
             {
                 ModuleEnginesAJEJet e = engineList[j];
-                if((object)e != null)
+                if((object)e != null) // probably unneeded because I'm updating the lists now
                 {
                     EngineArea += e.Area * (1 + e.BPR);
                 }
@@ -200,10 +315,10 @@ namespace AJE
             for (int j = 0; j < inletList.Count; j++)        
             {
                 AJEInlet i = inletList[j];
-                if(i)
+                if ((object)i != null) // probably unneeded because I'm updating the lists now
                 {
                     InletArea += i.Area;
-                    OverallTPR += i.Area * i.cosine * i.cosine * i.GetTPR((float)M0);
+                    OverallTPR += i.Area * i.cosine * i.cosine * i.GetTPR(M0);
                 }
             }
         
@@ -214,35 +329,38 @@ namespace AJE
 
         }
 
-        public void UpdateFlightCondition(double altitude, double vel, CelestialBody body)
+        new public void UpdateThrottle()
         {
-            double p0 = vessel.staticPressurekPa;//in Kpa
-            double t0 = vessel.externalTemperature; //in Kelvin
-            Environment = p0.ToString("N2") + " kPa;" + t0.ToString("N2") + " K ";
-
             if (CPR != 1)
-            {     
-                float requiredThrottle = (int)(vessel.ctrlState.mainThrottle * thrustPercentage); //0-100
-                float deltaT = (float)TimeWarp.fixedDeltaTime;
-                float throttleResponseRate = Mathf.Max(2 / Area / (1 + BPR), 5); //percent per second
+            {
+                double requiredThrottle = requestedThrottle * thrustPercentage * 0.01d;
+                double deltaT = TimeWarp.fixedDeltaTime;
+                double throttleResponseRate = Math.Max(2 / Area / (1 + BPR), 5) * 0.01d; //percent per second
 
-                float d = requiredThrottle - actualThrottle;
-                if (Mathf.Abs(d) > throttleResponseRate * deltaT)
-                    actualThrottle += Mathf.Sign(d) * throttleResponseRate * deltaT;
+                double d = requiredThrottle - currentThrottle;
+                if (Math.Abs(d) > throttleResponseRate * deltaT)
+                    currentThrottle += Mathf.Sign((float)d) * (float)(throttleResponseRate * deltaT);
                 else
-                    actualThrottle = requiredThrottle;
+                    currentThrottle = (float)requiredThrottle;
             }
             else // ramjet
             {
-                actualThrottle = (int)(vessel.ctrlState.mainThrottle * thrustPercentage);
+                currentThrottle = (float)(requestedThrottle * thrustPercentage * 0.01);
             }
+            currentThrottle = Mathf.Max(0.01f, currentThrottle);
+            actualThrottle = Mathf.RoundToInt(currentThrottle * 100f);
+        }
+
+        public void UpdateFlightCondition(double altitude, double vel, double pressure, double temperature)
+        {
+            Environment = pressure.ToString("N2") + " kPa;" + temperature.ToString("N2") + " K ";
 
             aje.SetTPR(OverallTPR);
-            aje.CalculatePerformance(p0, t0, vel, (actualThrottle + 1) / 100);
+            aje.CalculatePerformance(pressure, temperature, vel, currentThrottle);
             
         }
 
-        public double CalculateThrustParams()
+        public double CalculateEngineParams()
         {
             double thrustIn = aje.GetThrust() * Arearatio; //in N
             double isp = aje.GetIsp();
@@ -250,20 +368,26 @@ namespace AJE
             double massFlow = 0d;
             double propellantRecieved = 0d;
 
-            double vesselValue = vessel.VesselValues.FuelUsage.value;
-            if (vesselValue == 0d)
-                vesselValue = 1d;
-
-            double fuelFlow = thrustIn * invg0 / isp * vesselValue;
-            massFlow = fuelFlow * 0.001d * TimeWarp.fixedDeltaTime; // in tons
-
-            if (thrustIn <= 0d)
+            if (thrustIn <= 0d || double.IsNaN(thrustIn))
             {
-                Flameout("Air combustion failed");
+                if (currentThrottle > 0f && !double.IsNaN(thrustIn))
+                {
+                    Flameout("Air combustion failed");
+                }
                 propellantRecieved = 0d;
+                realIsp = 0f;
+                fuelFlowGui = 0f;
+                producedThrust = 0d;
             }
             else
             {
+                // calc flow
+                double vesselValue = vessel.VesselValues.FuelUsage.value;
+                if (vesselValue == 0d)
+                    vesselValue = 1d;
+                double fuelFlow = thrustIn * invg0 / isp * vesselValue;
+                massFlow = fuelFlow * 0.001d * TimeWarp.fixedDeltaTime; // in tons
+
                 if (CheatOptions.InfiniteFuel == true)
                 {
                     propellantRecieved = 1d;
@@ -273,14 +397,129 @@ namespace AJE
                 {
                     propellantRecieved = RequestPropellant(massFlow);
                 }
+                producedThrust = thrustIn * propellantRecieved * 0.001d; // to kN
+                fuelFlowGui = (float)(fuelFlow * propellantRecieved * vesselValue);
+                realIsp = (float)isp;
+
+                // soft cap
+                if (producedThrust > thrustUpperLimit)
+                    producedThrust = thrustUpperLimit + (producedThrust - thrustUpperLimit) * 0.1d;
             }
 
-            producedThrust = thrustIn * propellantRecieved;
-            fuelFlowGui = (float)(fuelFlow * propellantRecieved * vesselValue);
-            return producedThrust * 0.001d; // to kN
+            
+
+            return producedThrust;
         }
 
-        static string FormatTime(double time)
+        protected void GetLists(List<Part> parts)
+        {
+            engineList.Clear();
+            inletList.Clear();
+            for (int j = 0; j < partsCount; j++)        //reduces garbage produced compared to foreach due to Unity Mono issues
+            {
+                Part p = parts[j];
+                if (p.Modules.Contains("AJEModule"))
+                {
+                    engineList.Add((ModuleEnginesAJEJet)p.Modules["AJEModule"]);          //consider storing list of affected AJEModules and AJEInlets, perhaps a single one for each vessel.  Would result in better performance     
+                }
+                if (p.Modules.Contains("AJEInlet"))
+                {
+                    inletList.Add((AJEInlet)p.Modules["AJEInlet"]);
+                }
+            }
+        }
+        public string GetStaticThrustInfo()
+        {
+            string output = "";
+            if(aje == null)
+                CreateEngine();
+
+            // get stats
+            double pressure = 101.325d, temperature = 288.15d;
+            if (Planetarium.fetch != null)
+            {
+                CelestialBody home = Planetarium.fetch.Home;
+                if (home != null)
+                {
+                    pressure = home.GetPressure(0d);
+                    temperature = home.GetTemperature(0d);
+                }
+            }
+
+            currentThrottle = 1f;
+            OverallTPR = 1d;
+
+            UpdateFlightCondition(0d, 0d, pressure, temperature);
+            double thrust = (aje.GetThrust() * 0.001d);
+
+            if (TAB == 0) // no AB
+            {
+                output += "<b>Static Thrust: </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / aje.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
+            }
+            else
+            {
+                if (CPR == 1) // ramjet
+                {
+                    output += "<b>Thrust: </b>Ramjet of area " + Area + " m^2";
+                    if (thrustUpperLimit != double.MaxValue)
+                        output += ", max rated thrust " + thrustUpperLimit.ToString("N2") + " kN";
+                }
+                else
+                {
+                    output += "<b>Static Thrust (wet): </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / aje.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
+                    currentThrottle = 2f / 3f;
+                    UpdateFlightCondition(0d, 0d, pressure, temperature);
+                    thrust = (aje.GetThrust() * 0.001d);
+                    output += "\n<b>Static Thrust (dry): </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / aje.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
+                }
+            }
+            return output;
+        }
+        new public float normalizedOutput
+        {
+            get
+            {
+                // should this just be actualThrottle ?
+                // or should we get current thrust divided max possible thrust here?
+                // or what? FIXME
+                return finalThrust / maxThrust;
+            }
+        }
+        new public string GetModuleTitle()
+        {
+            return "AJE Engine";
+        }
+        new public string GetPrimaryField()
+        {
+            return GetStaticThrustInfo();
+        }
+
+        public override string GetInfo()
+        {
+            string output = GetStaticThrustInfo();
+
+            output += "\n<b><color=#99ff00ff>Propellants:</color></b>\n";
+            Propellant p;
+            string pName;
+            for (int i = 0; i < propellants.Count; ++i)
+            {
+                p = propellants[i];
+                pName = KSPUtil.PrintModuleName(p.name);
+
+                output += "- <b>" + pName + "</b>: " + getMaxFuelFlow(p).ToString("0.0##") + "/sec. Max.\n";
+                output += p.GetFlowModeDescription();
+            }
+            output += "<b>Flameout under: </b>" + (ignitionThreshold * 100f).ToString("0.#") + "%\n";
+
+            if (!allowShutdown) output += "\n" + "<b><color=orange>Engine cannot be shut down!</color></b>";
+            if (!allowRestart) output += "\n" + "<b><color=orange>If shutdown, engine cannot restart.</color></b>";
+            
+            currentThrottle = 0f;
+            
+            return output;
+        }
+
+        protected static string FormatTime(double time)
         {
             int iTime = (int)time % 3600;
             int seconds = iTime % 60;

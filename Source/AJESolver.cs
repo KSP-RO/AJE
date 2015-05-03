@@ -15,7 +15,7 @@ namespace AJE
 
         //overall engine design parameters; inlet total pressure recovery, bypass ratio, fan pressure ratio, 
         //compressor pressure ratio, turbine temperature ratio, 
-        private double TPR, BPR, FPR, CPR, TTR;
+        private double TPR, BPR, FPR, CPR, TTR, inv_BPRp1;
 
         //engine design point; mach number, temperature 
         private double M_d, T_d;
@@ -27,7 +27,7 @@ namespace AJE
         private double P2, T2;
 
         //Conditions at burner inlet / compressor exit
-        private double P3, T3, eta_c;
+        private double P3, T3, eta_c, inv_eta_c;
 
         //conditions at burner exit / turbine entrance; pressure, temperature, mass flow rate
         private double P4, T4, eta_t;
@@ -92,12 +92,12 @@ namespace AJE
 
             Aref = Area;
             TPR = totalPressureRecovery;
-            BPR = bypassRatio;
+            BPR = bypassRatio; inv_BPRp1 = 1d / (1d + BPR);
             CPR = compressorRatio;
             FPR = fanRatio;
             M_d = designMach;
             T_d = designTemperature;
-            eta_c = compressorEta;
+            eta_c = compressorEta; inv_eta_c = 1d / eta_c;
             eta_t = turbineEta;
             eta_n = nozzleEta;
             h_f = heatOfFuel;
@@ -130,34 +130,36 @@ namespace AJE
             }
             else
             {
-                mainThrottle = Math.Min(commandedThrottle * 1.5, 1.0);
-                abThrottle = Math.Max(commandedThrottle - 0.667, 0);
+                mainThrottle = Math.Min(commandedThrottle * 1.5d, 1.0);
+                abThrottle = Math.Max(commandedThrottle * 3d - 2d, 0);
             } 
             
             p0 = pressure * 1000;          //freestream
             t0 = temperature;
 
             gamma_c = CalculateGamma(t0, 0);
+            double inv_gamma_c = 1d / gamma_c;
+            double inv_gamma_cm1 = 1d / (gamma_c - 1d);
             Cp_c = CalculateCp(t0, 0);
-            Cv_c = Cp_c / gamma_c;
+            Cv_c = Cp_c * inv_gamma_c;
             R_c = Cv_c * (gamma_c - 1);
 
            
             M0 = velocity / Math.Sqrt(gamma_c * R_c * t0);
 
             T1 = t0 * (1 + 0.5 * (gamma_c - 1) * M0 * M0);      //inlet
-            P1 = p0 * Math.Pow(T1 / t0, gamma_c / (gamma_c - 1)) * TPR;
+            P1 = p0 * Math.Pow(T1 / t0, gamma_c * inv_gamma_cm1) * TPR;
 
             double prat3 = CPR;
             double prat2 = FPR;
             double k = FPR / CPR;
-            double p = Math.Pow(k, (gamma_c - 1) / eta_c / gamma_c);
+            double p = Math.Pow(k, (gamma_c - 1) * inv_eta_c * inv_gamma_c);
             for (int i = 0; i < 20; i++)    //use iteration to calculate CPR
             {
                 P2 = prat2 * P1;
                 P3 = prat3 * P1;
-                T2 = T1 * Math.Pow(prat2, (gamma_c - 1) / gamma_c / eta_c); //fan
-                T3 = T1 * Math.Pow(prat3, (gamma_c - 1) / gamma_c / eta_c); //compressor
+                T2 = T1 * Math.Pow(prat2, (gamma_c - 1) * inv_eta_c * inv_gamma_c); //fan
+                T3 = T1 * Math.Pow(prat3, (gamma_c - 1) * inv_eta_c * inv_gamma_c); //compressor
 
                 T4 = (Tt4 - T3) * mainThrottle + T3;    //burner
                 P4 = P3;
@@ -170,7 +172,7 @@ namespace AJE
 
                 prat3 = (1 + ff) * Cp_t * (T4 - T5) / T1 / Cp_c + 1 + BPR;
                 prat3 /= 1 + BPR * p;
-                prat3 = Math.Pow(prat3, eta_c * gamma_c / (gamma_c - 1));
+                prat3 = Math.Pow(prat3, eta_c * gamma_c * inv_gamma_cm1);
                 prat2 = k * prat3;
 
                 if (Math.Abs(x - prat3) < 0.01)
@@ -186,9 +188,9 @@ namespace AJE
 
             if (exhaustMixer && BPR > 0)//exhaust mixer
             {
-                double Cp6 = (Cp_c * BPR + Cp_t) / (1 + BPR);//Cp of mixed flow -- kind of
-                T6 = T5 * Cp_t / Cp6 * (1 + BPR * Cp_c * T2 / Cp_t / T5) / (1 + BPR);
-                P6 = (P5 + BPR * 0.98 * P2) / (1 + BPR);
+                double Cp6 = (Cp_c * BPR + Cp_t) * inv_BPRp1;//Cp of mixed flow -- kind of
+                T6 = T5 * Cp_t / Cp6 * (1 + BPR * Cp_c * T2 / Cp_t / T5) * inv_BPRp1;
+                P6 = (P5 + BPR * 0.98 * P2) * inv_BPRp1;
                 ff /= (1 + ff + BPR);
                 gamma_t = CalculateGamma(T6, ff);//gas parameters
                 Cp_t = CalculateCp(T6, ff);
@@ -205,7 +207,7 @@ namespace AJE
 
             if (Tt7 > 0)
             {
-                T7 = (Tt7 - T6) * abThrottle * 3 + T6;//afterburner  
+                T7 = (Tt7 - T6) * abThrottle + T6;//afterburner  
             }
             else
             {
@@ -243,7 +245,7 @@ namespace AJE
 
             if (BPR > 0 && FPR > 1 && exhaustMixer == false)
             {
-                fac1 = (gamma_c - 1) / gamma_c; //fan thrust from NASA
+                fac1 = (gamma_c - 1) * inv_gamma_c; //fan thrust from NASA
                 double snpr = P2 / p0;
                 double ues = Math.Sqrt(2.0 * R_c / fac1 * T2 * eta_n * (1.0 - Math.Pow(1.0 / snpr, fac1)));
                 double pfexit = (snpr <= 1.893) ? p0 : .52828 * P2; //exit pressure of fan 
@@ -253,7 +255,7 @@ namespace AJE
 
             thrust -= mdot / (1 + ff_ab) * (1 + (exhaustMixer ? 0 : BPR)) * (velocity);//ram drag
 
-            Isp = thrust / (mdot * ff_ab * 9.81);
+            Isp = thrust / (mdot * ff_ab * 9.80665);
           /*  
             debugstring = "";
             debugstring += "TTR:\t" + TTR.ToString("F3") + "\r\n";
