@@ -8,7 +8,7 @@ using KSP;
 
 namespace AJE
 {
-    public class AJESolver : EngineSolver
+    public class AJESolverJet : EngineSolver
     {
 
         //overall engine design parameters; bypass ratio, fan pressure ratio, 

@@ -51,8 +51,8 @@ namespace AJE
             //           bool DREactive = AssemblyLoader.loadedAssemblies.Any(
             //               a => a.assembly.GetName().Name.Equals("DeadlyReentry.dll", StringComparison.InvariantCultureIgnoreCase));
             //         heatProduction = (float)part.maxTemp * 0.1f;
-            engineSolver = new AJESolver();
-            (engineSolver as AJESolver).InitializeOverallEngineData(
+            engineSolver = new AJESolverJet();
+            (engineSolver as AJESolverJet).InitializeOverallEngineData(
                 Area,
                 TPR,
                 BPR,
