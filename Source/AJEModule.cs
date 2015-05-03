@@ -11,7 +11,7 @@ namespace AJE
 {
 
 
-    public class AJEModule : PartModule
+    public class ModuleEnginesAJEJet : ModuleEnginesFX
     {
         [KSPField(isPersistant = false, guiActive = false)]
         public float Area = 0.1f;
@@ -53,28 +53,31 @@ namespace AJE
         [KSPField(isPersistant = true, guiActive = false)]
         public float actualThrottle = 0;
 
+        // engine temp stuff
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Engine Temp", guiUnits = " K")]
+        public float engineTemp = 0f;
+        protected VInfoBox overheatBox = null;
+
+        // overrides from ModuleEngines
+        [KSPField(guiActive = true, guiName = "Fuel Flow", guiUnits = "kg/sec", guiFormat = "F5")]
+        new public float fuelFlowGui;
+
         public AJESolver aje;
-        public EngineWrapper engine;
-        public List<AJEModule> engineList;
+        public List<ModuleEnginesAJEJet> engineList;
         public List<AJEInlet> inletList;
-        public float OverallTPR = 1, Arearatio = 1;
+        public double OverallTPR = 1, Arearatio = 1;
+
+        private const double invg0 = 1d / 9.80665d;
         public void Start()
         {
             Need_Area = Area * (1 + BPR);
-            engine = new EngineWrapper(part);
-            engine.idle = 1f;
-            engine.IspMultiplier = 1f;
-            engine.atmChangeFlow = false;
-            engine.useVelCurve = false;
-            engine.useAtmCurve = false;
-            engine.machLimit = 99999;
-		    engine.machHeatMult = 1;
-            engine.ThrustUpperLimit = maxThrust;
+            
+            ThrustUpperLimit = maxThrust;
  //           bool DREactive = AssemblyLoader.loadedAssemblies.Any(
  //               a => a.assembly.GetName().Name.Equals("DeadlyReentry.dll", StringComparison.InvariantCultureIgnoreCase));
             if (TIT > part.maxTemp)
                 part.maxTemp = TIT;
-   //         engine.heatProduction = (float)part.maxTemp * 0.1f;
+   //         heatProduction = (float)part.maxTemp * 0.1f;
             aje = new AJESolver();
             aje.InitializeOverallEngineData(
                 Area,
@@ -95,12 +98,12 @@ namespace AJE
 
             if (CPR != 1)
             {
-                engine.engineDecelerationSpeed = .1f / (Area * (1 + BPR));
-                engine.engineAccelerationSpeed = .1f / (Area * (1 + BPR));
+                engineDecelerationSpeed = .1f / (Area * (1 + BPR));
+                engineAccelerationSpeed = .1f / (Area * (1 + BPR));
             }
             else
             {           //It's not like there's anything in a ramjet to spool, now is there?
-                engine.useEngineResponseTime = false;
+                useEngineResponseTime = false;
             }
             engineList.Clear();
             inletList.Clear();
@@ -109,64 +112,86 @@ namespace AJE
                 Part p = vessel.parts[j];
                 if (p.Modules.Contains("AJEModule"))
                 {
-                    engineList.Add((AJEModule)p.Modules["AJEModule"]);          //consider storing list of affected AJEModules and AJEInlets, perhaps a single one for each vessel.  Would result in better performance     
+                    engineList.Add((ModuleEnginesAJEJet)p.Modules["AJEModule"]);          //consider storing list of affected AJEModules and AJEInlets, perhaps a single one for each vessel.  Would result in better performance     
                 }
                 if (p.Modules.Contains("AJEInlet"))
                 {
                     inletList.Add((AJEInlet)p.Modules["AJEInlet"]); 
                 }
             }
+
+            // set initial params
+            engineTemp = 288.15f;
         }
               
         public void FixedUpdate()
         {
-            if (HighLogic.LoadedSceneIsEditor)
-                return;
-            if (engine.type == EngineWrapper.EngineType.NONE || !engine.EngineIgnited)
-                return;
-            if (vessel.mainBody.atmosphereContainsOxygen == false || part.vessel.altitude > vessel.mainBody.atmosphereDepth)
+            if (HighLogic.LoadedSceneIsEditor || TimeWarping())
             {
-                engine.SetEngineParams(0, 1000);
+                realIsp = 1f;
+                finalThrust = 0f;
                 return;
             }
+            if (EngineIgnited)
+            {
+                UpdatePropellantStatus();
+                if (vessel.mainBody.atmosphereContainsOxygen && vessel.altitude <= vessel.mainBody.atmosphereDepth)
+                {
+                    UpdateInletEffects();
+                    UpdateFlightCondition(vessel.altitude, part.vessel.srfSpeed, vessel.mainBody);
+                    double thrustOut = 0d;
+                    if (CPR == 1 && aje.GetM0() < 0.3)//ramjet
+                    {
+                        realIsp = 1f;
+                    }
+                    else
+                    {
+                        thrustOut = CalculateThrustParams();
+                    }
+                    finalThrust = (float)thrustOut * vessel.VesselValues.EnginePower.value;
 
-            UpdateInletEffects();
-            UpdateFlightCondition(vessel.altitude, part.vessel.srfSpeed, vessel.mainBody);
-
-            if(CPR == 1 && aje.GetM0()<0.3)//ramjet
-            {
-                engine.SetEngineParams(0, 1000);
-            }
-            else
-            {
-                float t = (float)aje.GetThrust() / 1000f * Arearatio; //in kN
-                float isp = (float)aje.GetIsp();
-                float ff = t / 9.801f / isp;
-                engine.SetEngineParams(ff, isp);
-   //             engine.SetThrust((float)aje.GetThrust() / 1000f * Arearatio);
-   //             engine.SetIsp((float)aje.GetIsp());
-            }
-            float fireflag = (float)aje.GetT3()/maxT3;
-            if (fireflag > 0.8f )
-            {
-                part.temperature = (fireflag * 2f - 1f) * part.maxTemp;
+                    // Heat
+                    double fireflag = aje.GetT3() / maxT3;
+                    if (fireflag >= 0.79999d)
+                    {
+                        if (fireflag > 1d)
+                        {
+                            FlightLogger.eventLog.Add("[" + FormatTime(vessel.missionTime) + "] " + part.partInfo.title + " melted its internals from airstream heat.");
+                            part.explode();
+                        }
+                        if (overheatBox == null)
+                        {
+                            overheatBox = part.stackIcon.DisplayInfo();
+                            overheatBox.SetMsgBgColor(XKCDColors.DarkRed.A(0.6f));
+                            overheatBox.SetMsgTextColor(XKCDColors.OrangeYellow.A(0.6f));
+                            overheatBox.SetMessage("Engine overheat!");
+                            overheatBox.SetProgressBarBgColor(XKCDColors.DarkRed.A(0.6f));
+                            overheatBox.SetProgressBarColor(XKCDColors.OrangeYellow.A(0.6f));
+                        }
+                        overheatBox.SetValue((float)fireflag * 2f - 1f, 0.6f, 1.0f);
+                    }
+                    else
+                    {
+                        overheatBox = null;
+                    }
+                }
             }
         }
 
         //ferram4: separate out so function can be called separately for editor sims
         public void UpdateInletEffects()
         {
-            float EngineArea = 0, InletArea = 0;
+            double EngineArea = 0, InletArea = 0;
             OverallTPR = 0;
 
             if (aje == null)
                 Debug.Log("HOW?!");
-            float M0 = (float)aje.GetM0();
-            
-            for (int j = 0; j < engineList.Count; j++)       
+            double M0 = aje.GetM0();
+            int eCount = engineList.Count;
+            for (int j = 0; j < eCount; ++j)
             {
-                AJEModule e = engineList[j];
-                if(e)
+                ModuleEnginesAJEJet e = engineList[j];
+                if((object)e != null)
                 {
                     EngineArea += e.Area * (1 + e.BPR);
                 }
@@ -178,7 +203,7 @@ namespace AJE
                 if(i)
                 {
                     InletArea += i.Area;
-                    OverallTPR += i.Area * i.cosine * i.cosine * i.GetTPR(M0);
+                    OverallTPR += i.Area * i.cosine * i.cosine * i.GetTPR((float)M0);
                 }
             }
         
@@ -191,13 +216,13 @@ namespace AJE
 
         public void UpdateFlightCondition(double altitude, double vel, CelestialBody body)
         {
-            double p0 = FlightGlobals.getStaticPressure(altitude, body);//in Kpa
-            double t0 = FlightGlobals.getExternalTemperature(altitude, body);//in Kelvin
-            Environment = p0.ToString("N2") + " Kpa;" + t0.ToString("N2") + " K ";
+            double p0 = vessel.staticPressurekPa;//in Kpa
+            double t0 = vessel.externalTemperature; //in Kelvin
+            Environment = p0.ToString("N2") + " kPa;" + t0.ToString("N2") + " K ";
 
             if (CPR != 1)
             {     
-                float requiredThrottle = (int)(vessel.ctrlState.mainThrottle * engine.thrustPercentage); //0-100
+                float requiredThrottle = (int)(vessel.ctrlState.mainThrottle * thrustPercentage); //0-100
                 float deltaT = (float)TimeWarp.fixedDeltaTime;
                 float throttleResponseRate = Mathf.Max(2 / Area / (1 + BPR), 5); //percent per second
 
@@ -209,7 +234,7 @@ namespace AJE
             }
             else // ramjet
             {
-                actualThrottle = (int)(vessel.ctrlState.mainThrottle * engine.thrustPercentage);
+                actualThrottle = (int)(vessel.ctrlState.mainThrottle * thrustPercentage);
             }
 
             aje.SetTPR(OverallTPR);
@@ -217,7 +242,53 @@ namespace AJE
             
         }
 
+        public double CalculateThrustParams()
+        {
+            double thrustIn = aje.GetThrust() * Arearatio; //in N
+            double isp = aje.GetIsp();
+            double producedThrust = 0d;
+            double massFlow = 0d;
+            double propellantRecieved = 0d;
 
+            double vesselValue = vessel.VesselValues.FuelUsage.value;
+            if (vesselValue == 0d)
+                vesselValue = 1d;
+
+            double fuelFlow = thrustIn * invg0 / isp * vesselValue;
+            massFlow = fuelFlow * 0.001d * TimeWarp.fixedDeltaTime; // in tons
+
+            if (thrustIn <= 0d)
+            {
+                Flameout("Air combustion failed");
+                propellantRecieved = 0d;
+            }
+            else
+            {
+                if (CheatOptions.InfiniteFuel == true)
+                {
+                    propellantRecieved = 1d;
+                    UnFlameout();
+                }
+                else
+                {
+                    propellantRecieved = RequestPropellant(massFlow);
+                }
+            }
+
+            producedThrust = thrustIn * propellantRecieved;
+            fuelFlowGui = (float)(fuelFlow * propellantRecieved * vesselValue);
+            return producedThrust * 0.001d; // to kN
+        }
+
+        static string FormatTime(double time)
+        {
+            int iTime = (int)time % 3600;
+            int seconds = iTime % 60;
+            int minutes = (iTime / 60) % 60;
+            int hours = (iTime / 3600);
+            return hours.ToString("D2")
+                + ":" + minutes.ToString("D2") + ":" + seconds.ToString("D2");
+        }
     }
 }
 

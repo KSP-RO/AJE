@@ -6,7 +6,7 @@ using KSP;
 
 namespace AJE
 {
-    public class AJEInlet:PartModule
+    public class AJEInlet : ModuleResourceIntake
     {
         [KSPField(isPersistant = false, guiActive = true, guiActiveEditor = true)]
         public float Area;
@@ -15,8 +15,9 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public bool useTPRCurve = true;
         [KSPField(isPersistant = false, guiActive = true)]
-        public float cosine = 1f;
-        public ModuleResourceIntake intake;
+        public double cosine = 1d;
+
+        private Transform intakeTransform = null; // replaces original
 
         public float GetTPR(float Mach)
         {
@@ -36,11 +37,11 @@ namespace AJE
                 
         public override void OnStart(StartState state)
         {
-            if (state == StartState.Editor)
-                return;
-            if (vessel == null)
-                return;
-            intake=(ModuleResourceIntake)part.Modules["ModuleResourceIntake"];
+            base.OnStart(state);
+            if (intakeTransform == null)
+            {
+                intakeTransform = part.FindModelTransform(intakeTransformName);
+            }
         }
 
         public void FixedUpdate()
@@ -51,23 +52,21 @@ namespace AJE
             {
                 return;
             }
-            if (part.Modules.Contains("ModuleResourceIntake"))
+
+            if (!intakeEnabled) //by Virindi
             {
-                if (!intake.intakeEnabled) //by Virindi
-                {
-                    cosine = 1f;
-                }
-                else
-                {
+                cosine = 1f;
+            }
+            else
+            {
 
-                    float realcos = Mathf.Max(0f, Vector3.Dot(vessel.srf_velocity.normalized, part.FindModelTransform(intake.intakeTransformName).forward.normalized));
+                double realcos = Math.Max(0d, Vector3.Dot(vessel.srf_velocity.normalized, intakeTransform.forward));
 
-                    float fakecos = (float)(-0.000123d * vessel.srfSpeed * vessel.srfSpeed + 0.002469d * vessel.srfSpeed + 0.987654d);
-                    if (fakecos > 1f)
-                        fakecos = 1f;
+                double fakecos = (-0.000123d * vessel.srfSpeed * vessel.srfSpeed + 0.002469d * vessel.srfSpeed + 0.987654d);
+                if (fakecos > 1d)
+                    fakecos = 1d;
 
-                    cosine = Mathf.Max(realcos, fakecos); //by Virindi
-                }
+                cosine = Math.Max(realcos, fakecos); //by Virindi
             }
         }
 
