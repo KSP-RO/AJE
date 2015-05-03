@@ -109,20 +109,6 @@ namespace AJE
             useAtmCurve = atmChangeFlow = useVelCurve = false;
         }
 
-        virtual public void Update()
-        {
-            if (HighLogic.LoadedSceneIsEditor)
-            {
-                List<Part> parts = EditorLogic.fetch.getSortedShipList();
-                int newCount = parts.Count;
-                if(newCount != partsCount)
-                {
-                    partsCount = newCount;
-                    GetLists(parts);
-                }
-            }
-        }
-              
         new virtual public void FixedUpdate()
         {
             realIsp = 0f;
@@ -132,7 +118,19 @@ namespace AJE
 
             SetUnflameout();
 
-            if (HighLogic.LoadedSceneIsEditor || TimeWarping())
+            if (HighLogic.LoadedSceneIsEditor)
+            {
+                List<Part> eParts = EditorLogic.fetch.getSortedShipList();
+                int eNewCount = eParts.Count;
+                if (eNewCount != partsCount)
+                {
+                    partsCount = eNewCount;
+                    GetLists(eParts);
+                }
+                return;
+            }
+
+            if (TimeWarping())
             {
                 currentThrottle = 0f;
                 return;
@@ -356,7 +354,7 @@ namespace AJE
                 Part p = parts[j];
                 if (p.Modules.Contains("AJEModule"))
                 {
-                    engineList.Add((ModuleEnginesAJE)p.Modules["AJEModule"]);          //consider storing list of affected AJEModules and AJEInlets, perhaps a single one for each vessel.  Would result in better performance     
+                    engineList.Add((ModuleEnginesAJEJet)p.Modules["AJEModule"]);          //consider storing list of affected AJEModules and AJEInlets, perhaps a single one for each vessel.  Would result in better performance     
                 }
                 if (p.Modules.Contains("AJEInlet"))
                 {

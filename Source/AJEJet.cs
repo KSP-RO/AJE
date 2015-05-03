@@ -11,7 +11,7 @@ namespace AJE
 {
 
 
-    public class ModuleEnginesAJE : ModuleRealEngine, IModuleInfo
+    public class ModuleEnginesAJEJet : ModuleRealEngine, IModuleInfo
     {
         [KSPField(isPersistant = false, guiActive = false)]
         public float Area = 0.1f;
