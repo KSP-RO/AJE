@@ -221,7 +221,7 @@ namespace AJE
                             overheatBox = part.stackIcon.DisplayInfo();
                             overheatBox.SetMsgBgColor(XKCDColors.DarkRed.A(0.6f));
                             overheatBox.SetMsgTextColor(XKCDColors.OrangeYellow.A(0.6f));
-                            overheatBox.SetMessage("Engine overheat!");
+                            overheatBox.SetMessage("Engine");
                             overheatBox.SetProgressBarBgColor(XKCDColors.DarkRed.A(0.6f));
                             overheatBox.SetProgressBarColor(XKCDColors.OrangeYellow.A(0.6f));
                         }
