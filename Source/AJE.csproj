@@ -27,12 +27,11 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="AJEJet.cs" />
-    <Compile Include="RealEngine.cs" />
+    <Compile Include="AJEJet.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="AJEPropeller.cs" />
     <Compile Include="AJERotor.cs" />
-    <Compile Include="AJEInlet.cs" />
-    <Compile Include="EngineSolver.cs" />
     <Compile Include="AJESolverJet.cs" />
     <Compile Include="EngineWrapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -41,6 +40,9 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Games\KSP_win1\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
+    </Reference>
+    <Reference Include="SolverEngines">
+      <HintPath>..\..\SolverEngines\SolverEngines.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="UnityEngine">

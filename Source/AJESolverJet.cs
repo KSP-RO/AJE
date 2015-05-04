@@ -111,7 +111,7 @@ namespace AJE
 
 
 
-        public override void CalculatePerformance(double pressure, double temperature, double velocity, double airRatio, double commandedThrottle)
+        public override void CalculatePerformance(double pressure, double temperature, double velocity, double airRatio, double commandedThrottle, double flowMult, double ispMult)
         {
             if (Tt7 == 0)
             {
@@ -243,7 +243,9 @@ namespace AJE
 
 
             thrust -= mdot / (1 + ff_ab) * (1 + (exhaustMixer ? 0 : BPR)) * (velocity);//ram drag
-            fuelFlow = mdot * ff_ab;
+
+            thrust *= flowMult * ispMult;
+            fuelFlow = mdot * ff_ab * flowMult;
             Isp = thrust / (fuelFlow * 9.80665);
             thrust *= airRatio; // FIXME: should this get applied to fuel flow and Isp too?
 

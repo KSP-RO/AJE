@@ -11,7 +11,7 @@ namespace AJE
 {
 
 
-    public class ModuleEnginesAJEJet : ModuleRealEngine, IModuleInfo
+    public class ModuleEnginesAJEJet : ModuleEnginesSolver, IModuleInfo
     {
         [KSPField(isPersistant = false, guiActive = false)]
         public float Area = 0.1f;
@@ -42,11 +42,9 @@ namespace AJE
         public bool exhaustMixer = false;
         [KSPField(isPersistant = false, guiActive = false)]
         public float maxT3 = 9999;
-        [KSPField(isPersistant = false, guiActive = true)]
-        public String Environment;
 
         
-        virtual public void CreateEngine()
+        public override void CreateEngine()
         {
             //           bool DREactive = AssemblyLoader.loadedAssemblies.Any(
             //               a => a.assembly.GetName().Name.Equals("DeadlyReentry.dll", StringComparison.InvariantCultureIgnoreCase));
@@ -69,15 +67,7 @@ namespace AJE
                 exhaustMixer
                 );
 
-            if (CPR != 1)
-            {
-                engineDecelerationSpeed = .1f / (Area * (1 + BPR));
-                engineAccelerationSpeed = .1f / (Area * (1 + BPR));
-            }
-            else
-            {           //It's not like there's anything in a ramjet to spool, now is there?
-                useEngineResponseTime = false;
-            }
+            maxEngineTemp = maxT3;
         }
 
         public override void UpdateThrottle()
