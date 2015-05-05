@@ -27,25 +27,33 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="AJEModule.cs" />
+    <Compile Include="AJEJet.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="AJEPropeller.cs" />
     <Compile Include="AJERotor.cs" />
-    <Compile Include="AJEInlet.cs" />
-    <Compile Include="AJESolver.cs" />
+    <Compile Include="AJESolverJet.cs" />
     <Compile Include="EngineWrapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Games\KSP_win1\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
     </Reference>
+    <Reference Include="SolverEngines">
+      <HintPath>..\..\SolverEngines\SolverEngines.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
     <Reference Include="UnityEngine">
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Games\KSP_win1\KSP_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>False</Private>
     </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>rd /s /q ..\..\Source\obj</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
