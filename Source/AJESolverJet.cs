@@ -54,6 +54,7 @@ namespace AJE
 
         //Reference area of the engine, combustor, and nozzle
         private double Aref, Acomb, Anozzle;
+        private double spoolFactor;
 
         //use exhaust mixer or not
         private bool exhaustMixer;
@@ -80,6 +81,7 @@ namespace AJE
         {
 
             Aref = Area;
+            spoolFactor = 1d - 0.05 * Math.Min(1d / Aref, 9d);
             TPR = totalPressureRecovery;
             BPR = bypassRatio; inv_BPRp1 = 1d / (1d + BPR);
             CPR = compressorRatio;
@@ -109,10 +111,43 @@ namespace AJE
 
         }
 
-
-
-        public override void CalculatePerformance(double pressure, double temperature, double velocity, double airRatio, double commandedThrottle, double flowMult, double ispMult)
+        public override void CalculatePerformance(double airRatio, double commandedThrottle, double flowMult, double ispMult)
         {
+            // set base bits
+            base.CalculatePerformance(airRatio, commandedThrottle, flowMult, ispMult);
+            
+            // if we're not combusting, don't combust and start cooling off
+            bool shutdown = !running;
+            statusString = "Nominal";
+            if (running && (!oxygen || eair0 <= 0d))
+            {
+                shutdown = true;
+                statusString = "No oxygen";
+            }
+            else if(ffFraction <= 0d)
+            {
+                shutdown = true;
+                statusString = "No fuel";
+            }
+            else if(CPR == 1 && M0 < 0.3d)
+            {
+                shutdown = true;
+                statusString = "Below ignition speed";
+            }
+            if(shutdown)
+            {
+                double shutdownScalar = Math.Pow(spoolFactor, TimeWarp.fixedDeltaTime);
+                
+                T3 = Math.Max(t0, T3 * shutdownScalar - 4d);
+
+                mainThrottle = Math.Max(0d, mainThrottle * shutdownScalar - 0.05d);
+                if(Tt7 > 0)
+                    abThrottle = Math.Max(0d, abThrottle * shutdownScalar - 0.05d);
+
+                return;
+            }
+
+            // set throttle
             if (Tt7 == 0)
             {
                 mainThrottle = commandedThrottle;
@@ -122,19 +157,6 @@ namespace AJE
                 mainThrottle = Math.Min(commandedThrottle * 1.5d, 1.0);
                 abThrottle = Math.Max(commandedThrottle * 3d - 2d, 0);
             }
-
-            p0 = pressure * 1000;          //freestream
-            t0 = temperature;
-
-            gamma_c = CalculateGamma(t0, 0);
-            double inv_gamma_c = 1d / gamma_c;
-            double inv_gamma_cm1 = 1d / (gamma_c - 1d);
-            Cp_c = CalculateCp(t0, 0);
-            Cv_c = Cp_c * inv_gamma_c;
-            R_c = Cv_c * (gamma_c - 1);
-
-
-            M0 = velocity / Math.Sqrt(gamma_c * R_c * t0);
 
             T1 = t0 * (1 + 0.5 * (gamma_c - 1) * M0 * M0);      //inlet
             P1 = p0 * Math.Pow(T1 / t0, gamma_c * inv_gamma_cm1) * TPR;
@@ -150,6 +172,8 @@ namespace AJE
                 T2 = T1 * Math.Pow(prat2, (gamma_c - 1) * inv_eta_c * inv_gamma_c); //fan
                 T3 = T1 * Math.Pow(prat3, (gamma_c - 1) * inv_eta_c * inv_gamma_c); //compressor
 
+                // FIXME use ffFraction here? Instead of just multiplying thrust by fuel fraction in the module?
+                // is so, set multiplyThrustByFuelFrac = false in the ModuleEnginesAJEJet.
                 T4 = (Tt4 - T3) * mainThrottle + T3;    //burner
                 P4 = P3;
                 ff = Cp_c * (T4 - T3) / (Cp_c * (T4 - T3) + h_f);//fuel fraction
@@ -242,7 +266,7 @@ namespace AJE
             }
 
 
-            thrust -= mdot / (1 + ff_ab) * (1 + (exhaustMixer ? 0 : BPR)) * (velocity);//ram drag
+            thrust -= mdot / (1 + ff_ab) * (1 + (exhaustMixer ? 0 : BPR)) * (vel);//ram drag
 
             thrust *= flowMult * ispMult;
             fuelFlow = mdot * ff_ab * flowMult;
@@ -273,8 +297,13 @@ namespace AJE
 
         public override double GetEngineTemp() { return T3; }
         public override double GetArea() { return Aref * (1d + BPR); }
-        public override bool CanThrust() { return CPR != 1 || M0 >= 0.3; }
-
+        public override double GetEmissive()
+        {
+            if (Tt7 == 0)
+                return mainThrottle;
+            else
+                return (mainThrottle * 0.25d + abThrottle * 0.75d);
+        }
     }
 
 }
