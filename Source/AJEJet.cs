@@ -111,8 +111,8 @@ namespace AJE
 
             currentThrottle = 1f;
             OverallTPR = 1d;
-
-            UpdateFlightCondition(0d, 0d, pressure, temperature);
+            
+            UpdateFlightCondition(0d, 0d, pressure, temperature, true);
             double thrust = (engineSolver.GetThrust() * 0.001d);
 
             if (TAB == 0) // no AB
@@ -131,7 +131,7 @@ namespace AJE
                 {
                     output += "<b>Static Thrust (wet): </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
                     currentThrottle = 2f / 3f;
-                    UpdateFlightCondition(0d, 0d, pressure, temperature);
+                    UpdateFlightCondition(0d, 0d, pressure, temperature, true);
                     thrust = (engineSolver.GetThrust() * 0.001d);
                     output += "\n<b>Static Thrust (dry): </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
                 }
@@ -140,7 +140,11 @@ namespace AJE
         }
         public override string GetModuleTitle()
         {
-            return "AJE Engine";
+            if (CPR == 1)
+                return "AJE Ramjet";
+            if (BPR > 0)
+                return "AJE Turbofan";
+            return "AJE Turbojet";
         }
         public override string GetPrimaryField()
         {
