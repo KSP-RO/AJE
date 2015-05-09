@@ -94,7 +94,7 @@ namespace AJE
         public string GetStaticThrustInfo()
         {
             string output = "";
-            if (engineSolver == null)
+            if (engineSolver == null || !(engineSolver is AJESolverJet))
                 CreateEngine();
 
             // get stats
@@ -111,6 +111,9 @@ namespace AJE
 
             currentThrottle = 1f;
             OverallTPR = 1d;
+            lastPropellantFraction = 1d;
+            bool oldE = EngineIgnited;
+            EngineIgnited = true;
             
             UpdateFlightCondition(0d, 0d, pressure, temperature, true);
             double thrust = (engineSolver.GetThrust() * 0.001d);
@@ -136,6 +139,7 @@ namespace AJE
                     output += "\n<b>Static Thrust (dry): </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
                 }
             }
+            EngineIgnited = oldE;
             return output;
         }
         public override string GetModuleTitle()
