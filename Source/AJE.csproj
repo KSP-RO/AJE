@@ -42,7 +42,8 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="SolverEngines">
-      <HintPath>..\..\SolverEngines\SolverEngines.dll</HintPath>
+      <HintPath>..\..\SolverEngines\GameData\SolverEngines\Plugins\SolverEngines.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="UnityEngine">

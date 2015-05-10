@@ -66,7 +66,7 @@ namespace AJE
                 TAB,
                 exhaustMixer
                 );
-
+            useAtmCurve = atmChangeFlow = useVelCurve = false;
             maxEngineTemp = maxT3;
         }
 
@@ -115,7 +115,7 @@ namespace AJE
             bool oldE = EngineIgnited;
             EngineIgnited = true;
             
-            UpdateFlightCondition(0d, 0d, pressure, temperature, true);
+            UpdateFlightCondition(0d, 0d, pressure, temperature, 1.225d, 0d, true);
             double thrust = (engineSolver.GetThrust() * 0.001d);
 
             if (TAB == 0) // no AB
@@ -134,7 +134,7 @@ namespace AJE
                 {
                     output += "<b>Static Thrust (wet): </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
                     currentThrottle = 2f / 3f;
-                    UpdateFlightCondition(0d, 0d, pressure, temperature, true);
+                    UpdateFlightCondition(0d, 0d, pressure, temperature, 1.225d, 0d, true);
                     thrust = (engineSolver.GetThrust() * 0.001d);
                     output += "\n<b>Static Thrust (dry): </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
                 }
