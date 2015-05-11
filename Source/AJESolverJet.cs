@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using KSP;
-
+using SolverEngines;
 
 
 namespace AJE

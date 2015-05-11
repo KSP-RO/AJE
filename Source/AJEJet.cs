@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using System.Reflection;
+using SolverEngines;
 
 namespace AJE
 {
