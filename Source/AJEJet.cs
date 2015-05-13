@@ -89,6 +89,7 @@ namespace AJE
             {
                 currentThrottle = (float)(requestedThrottle * thrustPercentage * 0.01);
             }
+            currentThrottle = Mathf.Max(0.01f, currentThrottle);
             base.UpdateThrottle();
         }
 
