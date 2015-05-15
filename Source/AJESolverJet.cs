@@ -18,9 +18,6 @@ namespace AJE
         //engine design point; mach number, temperature 
         private double M_d, T_d;
 
-        //conditions at inlet; pressure, temperature;
-        private double P1, T1;
-
         //conditions at fan; pressure, temperature;
         private double P2, T2;
 
@@ -64,7 +61,6 @@ namespace AJE
 
         public void InitializeOverallEngineData(
             double Area,
-            double totalPressureRecovery,
             double bypassRatio,
             double compressorRatio,
             double fanRatio,
@@ -82,7 +78,6 @@ namespace AJE
 
             Aref = Area;
             spoolFactor = 1d - 0.05 * Math.Min(1d / Aref, 9d);
-            TPR = totalPressureRecovery;
             BPR = bypassRatio; inv_BPRp1 = 1d / (1d + BPR);
             CPR = compressorRatio;
             FPR = fanRatio;
@@ -157,9 +152,6 @@ namespace AJE
                 mainThrottle = Math.Min(commandedThrottle * 1.5d, 1.0);
                 abThrottle = Math.Max(commandedThrottle * 3d - 2d, 0);
             }
-
-            T1 = t0 * (1 + 0.5 * (gamma_c - 1) * M0 * M0);      //inlet
-            P1 = p0 * Math.Pow(T1 / t0, gamma_c * inv_gamma_cm1) * TPR;
 
             double prat3 = CPR;
             double prat2 = FPR;
