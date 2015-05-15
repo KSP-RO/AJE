@@ -129,6 +129,12 @@ namespace AJE
                 shutdown = true;
                 statusString = "Below ignition speed";
             }
+            else if(airRatio < 0.01d)
+            {
+                shutdown = true;
+                statusString = "Insufficient intake area";
+            }
+
             if(shutdown)
             {
                 double shutdownScalar = Math.Pow(spoolFactor, TimeWarp.fixedDeltaTime);
