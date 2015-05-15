@@ -97,23 +97,24 @@ namespace AJE
                 CreateEngine();
 
             // get stats
+            CelestialBody home = null;
             if (Planetarium.fetch != null)
+                home = Planetarium.fetch.Home;
+                
+            if (home != null)
             {
-                CelestialBody home = Planetarium.fetch.Home;
-                if (home != null)
-                {
-                    ambientTherm.FromAmbientAtAltitude(0d, home);
-                    inletTherm.CopyFrom(ambientTherm);
-                    inletTherm.P *= 0.987654d * 0.987654d; // Maximum cosine
-                }
-                else
-                {
-                    ambientTherm.Zero();
-                    ambientTherm.P = 101325d;
-                    ambientTherm.Rho = 1.225d;
-                    ambientTherm.T = 288.15d;
-                }
+                ambientTherm.FromAmbientAtAltitude(0d, home);
             }
+            else
+            {
+                ambientTherm.Zero();
+                ambientTherm.P = 101325d;
+                ambientTherm.Rho = 1.225d;
+                ambientTherm.T = 288.15d;
+            }
+
+            inletTherm.CopyFrom(ambientTherm);
+            inletTherm.P *= 0.987654d * 0.987654d; // Static cosine
 
             areaRatio = 1d;
             currentThrottle = 1f;
