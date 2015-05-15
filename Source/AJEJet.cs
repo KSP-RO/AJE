@@ -98,22 +98,21 @@ namespace AJE
                 CreateEngine();
 
             // get stats
-            CelestialBody home = null;
+            double pressure = 101.325d, temperature = 288.15d, density = 1.225d;
             if (Planetarium.fetch != null)
-                home = Planetarium.fetch.Home;
-                
-            if (home != null)
             {
-                ambientTherm.FromAmbientAtAltitude(0d, home);
+                CelestialBody home = Planetarium.fetch.Home;
+                if (home != null)
+                {
+                    pressure = home.GetPressure(0d);
+                    temperature = home.GetTemperature(0d);
+                    density = home.GetDensity(pressure, temperature);
+                }
             }
-            else
-            {
-                ambientTherm.Zero();
-                ambientTherm.P = 101325d;
-                ambientTherm.Rho = 1.225d;
-                ambientTherm.T = 288.15d;
-            }
+            ambientTherm = new EngineThermodynamics();
+            ambientTherm.FromAmbientConditions(pressure, temperature, density);
 
+            inletTherm = new EngineThermodynamics();
             inletTherm.CopyFrom(ambientTherm);
             inletTherm.P *= 0.987654d * 0.987654d; // Static cosine
 
