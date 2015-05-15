@@ -16,7 +16,6 @@ namespace AJE
     {
         [KSPField(isPersistant = false, guiActive = false)]
         public float Area = 0.1f;
-        public float TPR = 1;
         [KSPField(isPersistant = false, guiActive = false)]
         public float BPR = 0;
         [KSPField(isPersistant = false, guiActive = false)]
@@ -53,7 +52,6 @@ namespace AJE
             engineSolver = new AJESolverJet();
             (engineSolver as AJESolverJet).InitializeOverallEngineData(
                 Area,
-                TPR,
                 BPR,
                 CPR,
                 FPR,
@@ -100,24 +98,32 @@ namespace AJE
                 CreateEngine();
 
             // get stats
-            double pressure = 101.325d, temperature = 288.15d;
+            CelestialBody home = null;
             if (Planetarium.fetch != null)
+                home = Planetarium.fetch.Home;
+                
+            if (home != null)
             {
-                CelestialBody home = Planetarium.fetch.Home;
-                if (home != null)
-                {
-                    pressure = home.GetPressure(0d);
-                    temperature = home.GetTemperature(0d);
-                }
+                ambientTherm.FromAmbientAtAltitude(0d, home);
+            }
+            else
+            {
+                ambientTherm.Zero();
+                ambientTherm.P = 101325d;
+                ambientTherm.Rho = 1.225d;
+                ambientTherm.T = 288.15d;
             }
 
+            inletTherm.CopyFrom(ambientTherm);
+            inletTherm.P *= 0.987654d * 0.987654d; // Static cosine
+
+            areaRatio = 1d;
             currentThrottle = 1f;
-            OverallTPR = 1d;
             lastPropellantFraction = 1d;
             bool oldE = EngineIgnited;
             EngineIgnited = true;
             
-            UpdateFlightCondition(0d, 0d, pressure, temperature, 1.225d, 0d, true);
+            UpdateFlightCondition(ambientTherm, 0d, 0d, 0d, true);
             double thrust = (engineSolver.GetThrust() * 0.001d);
 
             if (TAB == 0) // no AB
@@ -136,7 +142,7 @@ namespace AJE
                 {
                     output += "<b>Static Thrust (wet): </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
                     currentThrottle = 2f / 3f;
-                    UpdateFlightCondition(0d, 0d, pressure, temperature, 1.225d, 0d, true);
+                    UpdateFlightCondition(ambientTherm, 0d, 0d, 0d, true);
                     thrust = (engineSolver.GetThrust() * 0.001d);
                     output += "\n<b>Static Thrust (dry): </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
                 }
