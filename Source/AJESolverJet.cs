@@ -18,6 +18,9 @@ namespace AJE
         //engine design point; mach number, temperature 
         private double M_d, T_d;
 
+        //pressure ratios
+        private double prat2, prat3;
+
         //conditions at fan; pressure, temperature;
         private double P2, T2;
 
@@ -159,8 +162,8 @@ namespace AJE
                 abThrottle = Math.Max(commandedThrottle * 3d - 2d, 0);
             }
 
-            double prat3 = CPR;
-            double prat2 = FPR;
+            prat3 = CPR;
+            prat2 = FPR;
             double k = FPR / CPR;
             double p = Math.Pow(k, (gamma_c - 1) * inv_eta_c * inv_gamma_c);
             for (int i = 0; i < 20; i++)    //use iteration to calculate CPR
@@ -302,6 +305,8 @@ namespace AJE
             else
                 return (mainThrottle * 0.25d + abThrottle * 0.75d);
         }
+
+        public double Prat3 { get { return prat3; } }
     }
 
 }

@@ -43,6 +43,9 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public float maxT3 = 9999;
 
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Compression Ratio", guiFormat = "F1")]
+        public float prat3 = 0f;
+
         
         public override void CreateEngine()
         {
@@ -67,6 +70,9 @@ namespace AJE
                 );
             useAtmCurve = atmChangeFlow = useVelCurve = false;
             maxEngineTemp = maxT3;
+
+            if (CPR == 1f)
+                Fields["prat3"].guiActive = false;
         }
 
         public override void UpdateThrottle()
@@ -89,6 +95,12 @@ namespace AJE
             }
             currentThrottle = Mathf.Max(0.01f, currentThrottle);
             base.UpdateThrottle();
+        }
+
+        public override void CalculateEngineParams()
+        {
+            base.CalculateEngineParams();
+            prat3 = (float)(engineSolver as AJESolverJet).Prat3;
         }
 
         public string GetStaticThrustInfo()
