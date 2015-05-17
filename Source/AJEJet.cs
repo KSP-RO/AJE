@@ -103,7 +103,7 @@ namespace AJE
             prat3 = (float)(engineSolver as AJESolverJet).Prat3;
         }
 
-        public string GetStaticThrustInfo()
+        public string GetStaticThrustInfo(bool primaryField)
         {
             string output = "";
             if (engineSolver == null || !(engineSolver is AJESolverJet))
@@ -137,27 +137,45 @@ namespace AJE
             UpdateFlightCondition(ambientTherm, 0d, 0d, 0d, true);
             double thrust = (engineSolver.GetThrust() * 0.001d);
 
-            if (TAB == 0) // no AB
+            if (CPR == 1f) // ramjet
             {
-                output += "<b>Static Thrust: </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
+                if (primaryField)
+                    output += "<b>Ramjet</b> (no static thrust)\n";
+                if (thrustUpperLimit != double.MaxValue)
+                    output += "<b>Max Rated Thrust:</b> " + thrustUpperLimit.ToString("N2") + " kN\n";
+                if (!primaryField)
+                    output += "<b>Area:</b> " + Area + "\n";
             }
             else
             {
-                if (CPR == 1) // ramjet
+                if (TAB == 0f ) // no AB
                 {
-                    output += "<b>Thrust: </b>Ramjet of area " + Area + " m^2";
-                    if (thrustUpperLimit != double.MaxValue)
-                        output += ", max rated thrust " + thrustUpperLimit.ToString("N2") + " kN";
+                    output += "<b>Static Thrust: </b>" + thrust.ToString("N2") + " kN";
+                    if (!primaryField)
+                        output += "\n   <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h\n";
                 }
                 else
                 {
-                    output += "<b>Static Thrust (wet): </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
+                    output += "<b>Static Thrust (wet): </b>" + thrust.ToString("N2") + " kN";
+                    if (!primaryField)
+                        output += "\n   <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
                     currentThrottle = 2f / 3f;
                     UpdateFlightCondition(ambientTherm, 0d, 0d, 0d, true);
                     thrust = (engineSolver.GetThrust() * 0.001d);
-                    output += "\n<b>Static Thrust (dry): </b>" + thrust.ToString("N2") + " kN, <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
+                    output += "\n<b>Static Thrust (dry): </b>" + thrust.ToString("N2") + " kN";
+                    if (!primaryField)
+                        output += "\n   <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h\n";
                 }
             }
+
+            if (!primaryField && CPR != 1f)
+            {
+                output += "\n<b>Required Area:</b> " + engineSolver.GetArea().ToString("F3") + " m^2";
+                if (BPR > 0f)
+                    output += "\n<b>Bypass Ratio:</b> " + BPR.ToString("F2");
+                output += "\n<b>Compression Ratio (static):</b> " + (engineSolver as AJESolverJet).Prat3.ToString("F1") + "\n";
+            }
+
             EngineIgnited = oldE;
             return output;
         }
@@ -171,12 +189,12 @@ namespace AJE
         }
         public override string GetPrimaryField()
         {
-            return GetStaticThrustInfo();
+            return GetStaticThrustInfo(true);
         }
 
         public override string GetInfo()
         {
-            string output = GetStaticThrustInfo();
+            string output = GetStaticThrustInfo(false);
 
             output += "\n<b><color=#99ff00ff>Propellants:</color></b>\n";
             Propellant p;
