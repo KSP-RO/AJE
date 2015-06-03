@@ -17,8 +17,11 @@ ModuleAnimateEmissive replaces ModuleAnimateHeat with a more flexible, configura
 
 To use SolverEngines, implement two classes: a class that derives from EngineSolver that handles all calculation of thrust, Isp, and fuel flow given the passed-in parameters (and any new ones necessary), and a class that derives from ModuleEnginesSolver and overrides CreateEngine() to create an engine solver of the new type (and passes it any creation stats). Also override the info methods so proper info is displayed. You may also need to override other virtual methods in ModuleEnginesSolver (like UpdateFlightConditions and UpdateThrottle) depending on your engine's need for more status information or other requirements, and methods like OnStart or OnLoad to deal with more complexity.
 
+Note that SolverEngines uses the [KSPAssembly] tag. Add this line to your AssemblyInfo.cs file to make KSP aware that your assembly depends on SolverEngines:
+[assembly: KSPAssemblyDependency("SolverEngines", 1, 0)]
+
 SolverEngines will also automatically create overheat bars if engineTemp approaches maxEngineTemp, and will set all ModuleAnimateEmissive modules on the part to solver.GetEmissive() each tick.
 
 SolverEngines includes a GUI to display useful information about engines in flight, and additional info about air-breathing engines using SolverEngines when they are present.  The GUI will display an icon on blizzy87's toolbar if available, or on the stock toolbar if it is not.  All fields in the display GUI can be disabled in the settings window, and the display units can be changed in the units window.
 
-See AJE or RealFuels for examplez of how to implement SolverEngines in practice.
+See AJE or RealFuels for examples of how to implement SolverEngines in practice.

@@ -64,6 +64,9 @@ namespace AJE
         //use exhaust mixer or not
         private bool exhaustMixer;
 
+        // engine status
+        protected bool combusting = true;
+
         //---------------------------------------------------------
         //Initialization Functions
 
@@ -120,40 +123,30 @@ namespace AJE
             base.CalculatePerformance(airRatio, commandedThrottle, flowMult, ispMult);
             
             // if we're not combusting, don't combust and start cooling off
-            bool shutdown = !running;
+            combusting = running;
             statusString = "Nominal";
             if (running && (!oxygen || eair0 <= 0d))
             {
-                shutdown = true;
+                combusting = false;
                 statusString = "No oxygen";
             }
             else if(ffFraction <= 0d)
             {
-                shutdown = true;
+                combusting = false;
                 statusString = "No fuel";
             }
             else if(CPR == 1 && M0 < 0.3d)
             {
-                shutdown = true;
+                combusting = false;
                 statusString = "Below ignition speed";
             }
             else if(airRatio < 0.01d)
             {
-                shutdown = true;
+                combusting = false;
                 statusString = "Insufficient intake area";
             }
 
-            if (shutdown)
-            {
-                double shutdownScalar = Math.Pow(spoolFactor, TimeWarp.fixedDeltaTime);
-
-                T3 = Math.Max(t0, T3 * shutdownScalar - 4d);
-
-                mainThrottle = Math.Max(0d, mainThrottle * shutdownScalar - 0.05d);
-                if (Tt7 > 0)
-                    abThrottle = Math.Max(0d, abThrottle * shutdownScalar - 0.05d);
-            }
-            else
+            if (combusting)
             {
 
                 // set throttle
@@ -300,6 +293,16 @@ namespace AJE
                   debugstring += "NetThrust: " + (thrust / 1000).ToString("F1") + "\tSFC: " + (3600 / Isp).ToString("F3") + "\r\n";
                   Debug.Log(debugstring);*/
             }
+            else
+            {
+                double shutdownScalar = Math.Pow(spoolFactor, TimeWarp.fixedDeltaTime);
+
+                T3 = Math.Max(t0, T3 * shutdownScalar - 4d);
+
+                mainThrottle = Math.Max(0d, mainThrottle * shutdownScalar - 0.05d);
+                if (Tt7 > 0)
+                    abThrottle = Math.Max(0d, abThrottle * shutdownScalar - 0.05d);
+            }
             // Set FX power
             if (Tt7 == 0)
                 fxPower = (float)mainThrottle;
@@ -314,6 +317,7 @@ namespace AJE
         public override float GetFXRunning() { return fxPower; }
         public override float GetFXThrottle() { return fxPower; }
         public override float GetFXSpool() { return fxPower; }
+        public override bool GetRunning() { return combusting; }
 
         public double Prat3 { get { return prat3; } }
     }
