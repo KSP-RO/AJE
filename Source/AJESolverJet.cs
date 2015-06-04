@@ -251,7 +251,8 @@ namespace AJE
                 mdot = eair * A8;
                 double npr = P8 / p0;
                 double fac1 = (gamma_ab - 1.0) / gamma_ab;
-                V8 = Math.Sqrt(2.0 * R_c / fac1 * T8 * eta_n * (1.0 - Math.Pow(1.0 / npr, fac1)));     //exit velocity
+                double exitEnergy = R_c / fac1 * T8 * eta_n * (1.0 - Math.Pow(1.0 / npr, fac1));
+                V8 = Math.Sign(exitEnergy) * Math.Sqrt(Math.Abs(2.0 * R_c / fac1 * T8 * eta_n * (1.0 - Math.Pow(1.0 / npr, fac1))));     //exit velocity - may be negative under certain conditions
                 p8 = (npr <= 1.893) ? p0 : .52828 * P8;
                 thrust = V8 * mdot + (p8 - p0) * A8;
 
@@ -259,7 +260,8 @@ namespace AJE
                 {
                     fac1 = (gamma_c - 1) * inv_gamma_c; //fan thrust from NASA
                     double snpr = P2 / p0;
-                    double ues = Math.Sqrt(2.0 * R_c / fac1 * T2 * eta_n * (1.0 - Math.Pow(1.0 / snpr, fac1)));
+                    double fExitEnergy = R_c / fac1 * T2 * eta_n * (1.0 - Math.Pow(1.0 / snpr, fac1));
+                    double ues = Math.Sign(fExitEnergy) * Math.Sqrt(Math.Abs(2.0 * fExitEnergy));
                     double pfexit = (snpr <= 1.893) ? p0 : .52828 * P2; //exit pressure of fan 
                     thrust += BPR * ues * mdot / (1 + ff_ab) + (pfexit - p0) * BPR * Aref;
                 }
