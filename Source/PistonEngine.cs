@@ -162,6 +162,47 @@ namespace AJE
             // compute volumetric efficiency of engine, based on rated power and BSFC.
             ComputeVEMultiplier(); 
         }
+
+        // gets pressure at given alt in meters, used as fallback for SetBoostParams
+        public double GetPressure(double alt)
+        {
+            if (alt < 11d)
+                return 101325d * Math.Pow((1d - 0.0065d * alt / 288.15d), 5.2561);
+            else
+                return 101325d * Math.Pow((1d - 0.0065 * 11d / 288.15), 5.2561)
+                    * Math.Exp(6371000d * 6371000d / ((6371000 + alt) * (6371000 + alt)) * 9.80665d * (11000d - alt) / 287.3d / 329.65d);
+        }
+        CelestialBody RecurseFindHomeworld(PSystemBody b)
+        {
+            if (b.celestialBody != null && b.celestialBody.isHomeWorld)
+                return b.celestialBody;
+            foreach (PSystemBody c in b.children)
+            {
+                CelestialBody h = RecurseFindHomeworld(c);
+                if (h != null)
+                    return h;
+            }
+            return null;
+        }
+        CelestialBody FindHomeworld()
+        {
+            CelestialBody body = null;
+            
+            if(Planetarium.fetch)
+                body = Planetarium.fetch.Home;
+
+            if (body == null && FlightGlobals.fetch != null && FlightGlobals.fetch.bodies != null)
+                foreach (CelestialBody b in FlightGlobals.fetch.bodies)
+                    if (b.isHomeWorld)
+                        return b;
+
+            if (body == null && PSystemManager.Instance != null && PSystemManager.Instance.systemPrefab != null)
+            {
+                body = RecurseFindHomeworld(PSystemManager.Instance.systemPrefab.rootBody);
+            }
+
+            return body;
+        }
         // set boost parameters:
         // maximum MAP, the two boost pressures to maintain, the two rated altitudes (km),
         // the cost for the second boost mode, and the switch altitude (in km), or -1f for auto
@@ -180,18 +221,31 @@ namespace AJE
         public bool SetBoostParams(double wastegate, double boost0, double boost1, double rated0, double rated1, double cost1, double switchAlt, bool turbo)
         {
             bool retVal = false;
-            CelestialBody body = Planetarium.fetch.Home;
-            if (body == null)
-                body = FlightGlobals.Bodies.Find(b => b.isHomeWorld);
+            double pres0, pres1;
+
+            // get pressure at rated alts
+            CelestialBody body = FindHomeworld();
+            
+            if (body != null)
+            {
+                pres0 = body.GetPressure(rated0);
+                pres1 = body.GetPressure(rated1);
+            }
+            else
+            {
+                pres0 = GetPressure(rated0);
+                pres1 = GetPressure(rated1);
+            }
+
             if (boost0 > 0)
             {
-                _boostMults[0] = boost0 / body.GetPressure(rated0);
+                _boostMults[0] = boost0 / pres0;
                 _maxMP = wastegate;
                 retVal = true;
             }
             if (boost1 > 0)
             {
-                _boostMults[1] = boost1 / body.GetPressure(rated1);
+                _boostMults[1] = boost1 / pres1;
                 _boostCosts[1] = cost1;
             }
             else
