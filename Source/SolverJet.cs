@@ -8,7 +8,7 @@ using SolverEngines;
 
 namespace AJE
 {
-    public class AJESolverJet : EngineSolver
+    public class SolverJet : EngineSolver
     {
 
         //overall engine design parameters; bypass ratio, fan pressure ratio, 

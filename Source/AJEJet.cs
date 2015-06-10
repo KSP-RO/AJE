@@ -52,8 +52,8 @@ namespace AJE
             //           bool DREactive = AssemblyLoader.loadedAssemblies.Any(
             //               a => a.assembly.GetName().Name.Equals("DeadlyReentry.dll", StringComparison.InvariantCultureIgnoreCase));
             //         heatProduction = (float)part.maxTemp * 0.1f;
-            engineSolver = new AJESolverJet();
-            (engineSolver as AJESolverJet).InitializeOverallEngineData(
+            engineSolver = new SolverJet();
+            (engineSolver as SolverJet).InitializeOverallEngineData(
                 Area,
                 BPR,
                 CPR,
@@ -100,13 +100,13 @@ namespace AJE
         public override void CalculateEngineParams()
         {
             base.CalculateEngineParams();
-            prat3 = (float)(engineSolver as AJESolverJet).Prat3;
+            prat3 = (float)(engineSolver as SolverJet).Prat3;
         }
 
         public string GetStaticThrustInfo(bool primaryField)
         {
             string output = "";
-            if (engineSolver == null || !(engineSolver is AJESolverJet))
+            if (engineSolver == null || !(engineSolver is SolverJet))
                 CreateEngine();
 
             // get stats
@@ -173,7 +173,7 @@ namespace AJE
                 output += "\n<b>Required Area:</b> " + engineSolver.GetArea().ToString("F3") + " m^2";
                 if (BPR > 0f)
                     output += "\n<b>Bypass Ratio:</b> " + BPR.ToString("F2");
-                output += "\n<b>Compression Ratio (static):</b> " + (engineSolver as AJESolverJet).Prat3.ToString("F1") + "\n";
+                output += "\n<b>Compression Ratio (static):</b> " + (engineSolver as SolverJet).Prat3.ToString("F1") + "\n";
             }
 
             EngineIgnited = oldE;
