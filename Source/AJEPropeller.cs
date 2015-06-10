@@ -237,6 +237,7 @@ namespace AJE
 
         public override string GetInfo()
         {
+            CreateEngine();
             string output = GetBaseInfo();
             output += minRPM.ToString("N0") + " / " + maxRPM.ToString("N0") + " RPM, gearing " + gearratio.ToString("N3") + "\n";
             if (useOxygen && boost0 > 1d)
