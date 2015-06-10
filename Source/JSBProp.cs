@@ -207,13 +207,9 @@ namespace AJE
         bool Feathered;    // true, if feather command
 
         // constants
-        const double HPTOFTLBSEC = 550;
-        const double FTTOM = 0.3048;
-        const double INTOM = 0.0254;
-        const double LBTOKN = 0.0044482216;
-        const double KGM3TOSLUGFT3 = 0.00194032033;
-        const double MTOFT = 1 / FTTOM;
-        const double FTLBTOJ = 1.3558179491; // W/HP divided by ft-lb/HP
+        const double FTTOM = 0.3048d;
+        const double INTOM = 0.0254d;
+        const double FTLBTOJ = 1.3558179491d; // W/HP divided by ft-lb/HP
 
         public void LogVars()
         {
@@ -505,6 +501,9 @@ namespace AJE
         /// Retrieves the RPMs of the propeller
         public double GetRPM() { return RPM; }
 
+        public double GetMinRPM() { return MinRPM; }
+        public double GetMaxRPM() { return MaxRPM; }
+
         /*/// Calculates the RPMs of the engine based on gear ratio
         public double GetEngineRPM() { return RPM * GearRatio; }*/
 
@@ -589,10 +588,10 @@ namespace AJE
                         if (!Reversed)
                         {
                             double rpmReq = MinRPM + (MaxRPM - MinRPM) * Advance;
-                            double dRPM = rpmReq - RPM;
+                            double dRPM = RPM - rpmReq;
                             // The pitch of a variable propeller cannot be changed when the RPMs are
                             // too low - the oil pump does not work.
-                            if (RPM > 200) Pitch -= dRPM * deltaT;
+                            if (RPM > 200) Pitch += dRPM * deltaT;
                             if (Pitch < MinPitch) Pitch = MinPitch;
                             else if (Pitch > MaxPitch) Pitch = MaxPitch;
 
@@ -654,10 +653,6 @@ namespace AJE
             @return the thrust in pounds */
         public double Calculate(double EnginePower, double rho, double Vel, double speedOfSound)
         {
-            /*rho *= KGM3TOSLUGFT3;
-            Vel *= MSECTOFTSEC;
-            speedOfSound *= MSECTOFTSEC;*/
-
             double omega, PowerAvailable;
             double RPS = RPM / 60d;
             double machInv = 1d / speedOfSound;
@@ -748,12 +743,14 @@ namespace AJE
             // Transform Torque and momentum first, as PQR is used in this
             // equation and cannot be transformed itself.
             //vMn = in.PQR*(Transform()*vH) + Transform()*vTorque;
-            if (MachDrag != null)
+
+            // hacky mach drag -- should not be needed with nuFAR
+            /*if (MachDrag != null)
             {
                 double machDrag = MachDrag.Evaluate((float)(Vel * machInv));
                 machDrag *= machDrag * D4 * RPS * RPS * rho * 0.00004d;
                 Thrust -= machDrag;
-            }
+            }*/
             return Thrust;
         }
     }

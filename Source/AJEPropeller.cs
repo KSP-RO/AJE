@@ -11,6 +11,7 @@ namespace AJE
     {
         #region Fields
         #region Loadable fields
+        // engine fields
         [KSPField]
         public bool useOxygen = true;
         [KSPField]
@@ -25,9 +26,6 @@ namespace AJE
         public bool turbo = false;
         [KSPField]
         public double BSFC = 7.62e-08d;
-        [KSPField(isPersistant = true, guiActive = false)]
-        public string propName;
-
         [KSPField]
         public double wastegateMP = 29.921d;
         [KSPField]
@@ -57,6 +55,9 @@ namespace AJE
         [KSPField]
         public double ramAir = 0.2f;
 
+        // Prop fields
+        [KSPField(isPersistant = true, guiActive = false)]
+        public string propName;
         [KSPField(isPersistant = true, guiActive = false)]
         public double propDiam = -1d;
         [KSPField(isPersistant = true, guiActive = false)]
@@ -127,10 +128,136 @@ namespace AJE
         //[KSPField(guiActive = true)]
         //public string velocityvector;
 
-        public PistonEngine pistonEngine;
+        protected PistonEngine pistonEngine;
+        protected SolverPropeller solverProp;
         #endregion
         #endregion
 
+        #region Setup methods
+        public override void CreateEngine()
+        {
+            pistonEngine = null;
+            
+            double powW = power * PistonEngine.HP2W;
+            
+            if (maxEngineTemp == 0d)
+                maxEngineTemp = 3600d;
+            heatProduction = 10f; // HACK fixme. But we don't want to create much heat in the part.
+
+            if (useOxygen)
+            {
+                pistonEngine = new PistonEngine(
+                    powW,
+                    maxRPM,
+                    BSFC,
+                    ramAir,
+                    displacement * PistonEngine.CIN2CM,
+                    compression,
+                    coolerEffic,
+                    coolerMin + CTOK,
+                    exhaustThrust,
+                    meredithEffect,
+                    // Super/turbo params:
+                    wastegateMP * INHG2PA, boost0 * INHG2PA, boost1 * INHG2PA, rated0, rated1, cost1 * PistonEngine.HP2W, switchAlt, turbo
+                    );
+            }
+            engineSolver = solverProp = new SolverPropeller(pistonEngine, powW, BSFC, gearratio, propName, minRPM * gearratio, maxRPM * gearratio, propDiam, propIxx);
+
+            if (solverProp.GetConstantSpeed() == 0)
+                Fields["propPitch"].guiActive = false;
+            if (exhaustThrust <= 0f)
+                Fields["netExhaustThrust"].guiActive = false;
+            if (meredithEffect <= 0f)
+                Fields["netMeredithEffect"].guiActive = false;
+
+            Fields["statusL2"].guiActive = true; // always show
+        }
+
+        public override void OnStart(StartState state)
+        {
+            base.OnStart(state);
+
+            SetFields();
+        }
+        #endregion
+
+        #region Update methods
+        public override void UpdateFlightCondition(EngineThermodynamics ambientTherm, double altitude, double vel, double mach, bool oxygen)
+        {
+            // change up the velocity vector, it's now vs the engine part.
+            vel = Vector3.Dot(vessel.srf_velocity, -thrustTransforms[0].forward.normalized);
+            v = (float)vel;
+
+            // set engine params prior to calculation
+            if (pistonEngine != null)
+            {
+                pistonEngine.SetWastegate(boost);
+                pistonEngine.SetMixture(mixture);
+            }
+
+            base.UpdateFlightCondition(ambientTherm, altitude, vel, mach, oxygen);
+        }
+        public override void CalculateEngineParams()
+        {
+            base.CalculateEngineParams();
+            Fields["statusL2"].guiActive = true; // always show
+
+            brakeHorsepower = (float)(solverProp.GetShaftPower() * PistonEngine.W2HP);
+            if(pistonEngine != null)
+            {
+                manifoldPressure = (float)(pistonEngine.GetMAP() * PA2INHG);
+                chargeAirTemp = (float)pistonEngine.GetChargeTemp();
+            }
+            propRPM = (float)solverProp.GetPropRPM();
+            propPitch = (float)solverProp.GetPropPitch();
+        }
+        #endregion
+
+        #region Info methods
+        public string GetBaseInfo()
+        {
+            string output = "";
+            if(useOxygen && boost0 > 1d)
+            {
+                if(turbo)
+                    output += "Turbosupercharged, ";
+                else
+                    output += "Supercharged, ";
+            }
+            return output + power + "HP\n";
+        }
+        public override string GetModuleTitle()
+        {
+            return (useOxygen ? "AJE Piston Engine" : "AJE Propeller Engine");
+        }
+        public override string GetPrimaryField()
+        {
+            return GetBaseInfo();
+        }
+
+        public override string GetInfo()
+        {
+            string output = GetBaseInfo();
+            output += minRPM.ToString("N0") + " / " + maxRPM.ToString("N0") + " RPM, gearing " + gearratio.ToString("N3") + "\n";
+            if (useOxygen && boost0 > 1d)
+            {
+                output += "Max MP " + wastegateMP.ToString("N3") +" inHg, Rated: " + boost0.ToString("N2") + "ata at " + rated0.ToString("N1") + "km";
+                if (boost1 > 1d)
+                {
+                    output += ", " + boost1.ToString("N2") + "ata at " + rated1.ToString("N1") + "km";
+                    if (switchAlt > 0d)
+                        output += ", switch " + switchAlt.ToString("N1") + "km";
+                    else
+                        output += ", autoswitching";
+                }
+                output += "\n";
+            }
+            output += "BSFC: " + BSFC + " kg/W-s\nPropeller: " + solverProp.GetDiameter().ToString("N2") + "m diameter";
+            return output;
+        }
+        #endregion
+
+        #region Helpers
         public void SetFields()
         {
             Fields["engineTempString"].guiName = "Exhaust Temp";
@@ -150,81 +277,6 @@ namespace AJE
                 Fields["VolETweak"].guiActive = Fields["VolETweak"].guiActiveEditor =
                 Fields["MachPowTweak"].guiActive = Fields["MachPowTweak"].guiActiveEditor = debugFields;
         }
-
-        public override void CreateEngine()
-        {
-            pistonEngine = null;
-            
-            double powW = power * PistonEngine.HP2W;
-            
-            if (maxEngineTemp == 0d)
-                maxEngineTemp = 3600d;
-
-            if (useOxygen)
-            {
-                pistonEngine = new PistonEngine(
-                    powW,
-                    maxRPM,
-                    BSFC,
-                    ramAir,
-                    displacement * PistonEngine.CIN2CM,
-                    compression,
-                    coolerEffic,
-                    coolerMin + CTOK,
-                    exhaustThrust,
-                    meredithEffect,
-                    // Super/turbo params:
-                    wastegateMP * INHG2PA, boost0 * INHG2PA, boost1 * INHG2PA, rated0, rated1, cost1 * PistonEngine.HP2W, switchAlt, turbo
-                    );
-            }
-            engineSolver = new SolverPropeller(pistonEngine, powW, BSFC, gearratio, propName, minRPM * gearratio, maxRPM * gearratio, propDiam, propIxx);
-
-            if ((engineSolver as SolverPropeller).GetConstantSpeed() == 0)
-                Fields["propPitch"].guiActive = false;
-            if (exhaustThrust <= 0f)
-                Fields["netExhaustThrust"].guiActive = false;
-            if (meredithEffect <= 0f)
-                Fields["netMeredithEffect"].guiActive = false;
-
-            Fields["statusL2"].guiActive = true; // always show
-        }
-
-        public override void OnStart(StartState state)
-        {
-            base.OnStart(state);
-
-            SetFields();
-
-            if (state == StartState.Editor)
-                return;
-            if (vessel == null)
-                return;
-
-            propRPM = 30; // start slow
-        }
-
-        public override void UpdateFlightCondition(EngineThermodynamics ambientTherm, double altitude, double vel, double mach, bool oxygen)
-        {
-            // change up the velocity vector, it's now vs the engine part.
-            vel = Vector3.Dot(vessel.srf_velocity, -thrustTransforms[0].forward.normalized);
-
-            // set engine params prior to calculation
-            if (pistonEngine != null)
-            {
-                pistonEngine.SetWastegate(boost);
-                pistonEngine.SetMixture(mixture);
-            }
-
-            base.UpdateFlightCondition(ambientTherm, altitude, vel, mach, oxygen);
-        }
-        public override void CalculateEngineParams()
-        {
-            base.CalculateEngineParams();
-            Fields["statusL2"].guiActive = true; // always show
-
-            brakeHorsepower = (float)(pistonEngine.GetShaftPower() * PistonEngine.W2HP);
-            manifoldPressure = (float)(pistonEngine.GetMAP() / PA2INHG);
-            chargeAirTemp = (float)pistonEngine.GetChargeTemp();
-        }
+        #endregion
     }
 }

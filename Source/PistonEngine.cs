@@ -425,25 +425,25 @@ namespace AJE
         public void Update(EngineSolver solver, double shaftRPM, double deltaTime)
         {
             double pAmb = solver.p0 + _ramAir * solver.Q;
-            
+
             _throttle = solver.throttle;
             _fuel = solver.ffFraction > 0d;
             _engineThrust = 0d;
             _status = "Windmilling";
-            bool canStart = solver.running;
+            bool canStart = _running = solver.running;
 
             // in precedence order, set running = false (highest priority message last)
-
             if (shaftRPM < 60d) // 60RPM min for engine running
             {
                 _status = "Too Low RPM"; // status should never be seen because
                 _running = false; // the starter motor bit at the end will happen
                 // or another case will trump this.
             }
-            if (_throttle == 0d)
+            if (_throttle == 0d || !canStart)
             {
                 _status = "Magnetos Off";
                 _running = false;
+                canStart = false;
             }
             if (!_fuel)
             {
@@ -451,7 +451,7 @@ namespace AJE
                 _running = false;
                 canStart = false;
             }
-            if (!solver.oxygen)
+            if (!solver.oxygen || solver.rho <= 0d)
             {
                 _status = "No Oxygen";
                 _running = false;
@@ -564,7 +564,7 @@ namespace AJE
                 _mp = solver.p0;
                 _boostPressure = 0d;
                 // assume a starter motor of 15% power
-                if (_throttle > 0d && canStart)
+                if (canStart)
                 {
                     _status = "Starter On";
                     _power = _totalPower = 0.15d * _power0;

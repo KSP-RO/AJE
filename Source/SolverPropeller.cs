@@ -78,11 +78,14 @@ namespace AJE
         protected AJEPropJSB propJSB = null;
 
         // prop stats
-        double propRPM = 0d;
-        double propThrust = 0d;
-        double propPitch = 0d;
-        double maxRPM = 60d;
-        double maxRPMRecip = 1d / 60d;
+        protected double propRPM = 0d;
+        protected double propThrust = 0d;
+        protected double propPitch = 0d;
+        protected double minRPM = 60d;
+        protected double maxRPM = 60d;
+        protected double maxRPMRecip = 1d / 60d;
+        protected double diameter = 2d;
+        protected double ixx = 0.1d;
 
         // engine stats
         double maxPower = 1d;
@@ -97,6 +100,10 @@ namespace AJE
         bool combusting = false;
 
         public int GetConstantSpeed() { return propJSB.GetConstantSpeed(); }
+        public double GetDiameter() { return diameter; }
+        public double GetPropRPM() { return propRPM; }
+        public double GetPropPitch() { return propPitch; }
+        public double GetShaftPower() { return shaftPower; }
 
         public SolverPropeller(ITorqueProducer eng, double power, double sfc, double gear, string propName, double minR = -1, double maxR = -1, double diam = -1, double ixx = -1)
         {
@@ -105,9 +112,15 @@ namespace AJE
             BSFC = sfc;
             gearRatio = gear;
             gearRatioRecip = 1d / gear;
-            maxRPM = maxR;
-            maxRPMRecip = 1d / maxRPM;
             propJSB = new AJEPropJSB(propName, minR, maxR, diam, ixx);
+
+            // set our prop stats
+            diameter = propJSB.GetDiameter();
+            ixx = propJSB.GetIxx();
+            minRPM = propJSB.GetMinRPM();
+            maxRPM = propJSB.GetMaxRPM();
+            maxRPMRecip = 1d / maxRPM;
+
         }
 
         public void UpdateTweaks(double CtTweak, double CpTweak, double VolETweak, double MachPowTweak)
@@ -160,8 +173,6 @@ namespace AJE
             }
             else
             {
-                if (!running) // if we're not ignited, don't pass throttle on (or else engine will start)
-                    throttle = 0d;
                 engine.Update(this, propRPM * gearRatioRecip, deltaTime);
                 shaftPower = engine.GetShaftPower() * ispMult * flowMult;
                 fuelFlow = engine.GetFuelFlow() * flowMult;
@@ -172,22 +183,25 @@ namespace AJE
             }
 
             // now handle propeller
-            propJSB.deltaT = (float)TimeWarp.fixedDeltaTime;
-            propJSB.SetAdvance(propRPM);
-            propThrust = propJSB.Calculate(shaftPower, rho, vel, eair0);
-            propRPM = propJSB.GetRPM();
-            propPitch = (float)propJSB.GetPitch();
+            if (rho > 0d)
+            {
+                propJSB.deltaT = (float)TimeWarp.fixedDeltaTime;
+                propJSB.SetAdvance(propRPM);
+                propThrust = propJSB.Calculate(shaftPower, rho, vel, eair0);
+                propRPM = propJSB.GetRPM();
+                propPitch = (float)propJSB.GetPitch();
 
-            // TODO: Assign thrustRot and thrustOffset based on PFactor calcs
+                // TODO: Assign thrustRot and thrustOffset based on PFactor calcs
 
-            double tmpRatio = propRPM * maxRPMRecip;
-            if (tmpRatio > 1d)
-                tmpRatio *= tmpRatio;
-            // engine overspeed correction (internal friction at high RPM)
-            if (tmpRatio > 1.1)
-                propRPM -= (tmpRatio * tmpRatio * tmpRatio) * maxRPM * deltaTime;
+                double tmpRatio = propRPM * maxRPMRecip;
+                if (tmpRatio > 1d)
+                    tmpRatio *= tmpRatio;
+                // engine overspeed correction (internal friction at high RPM)
+                if (tmpRatio > 1.1)
+                    propRPM -= (tmpRatio * tmpRatio * tmpRatio) * maxRPM * deltaTime;
 
-            thrust = propThrust + engineThrust;
+                thrust += propThrust;
+            }
             if (fuelFlow > 0d)
                 Isp = thrust / (fuelFlow * 9.80665d);
 
