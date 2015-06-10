@@ -221,7 +221,7 @@ namespace AJE
         public bool SetBoostParams(double wastegate, double boost0, double boost1, double rated0, double rated1, double cost1, double switchAlt, bool turbo)
         {
             bool retVal = false;
-            double pres0, pres1;
+            double pres0, pres1, switchpres;
 
             // get pressure at rated alts
             CelestialBody body = FindHomeworld();
@@ -230,35 +230,37 @@ namespace AJE
             {
                 pres0 = body.GetPressure(rated0);
                 pres1 = body.GetPressure(rated1);
+                switchpres = body.GetPressure(switchAlt);
             }
             else
             {
                 pres0 = GetPressure(rated0);
                 pres1 = GetPressure(rated1);
+                switchpres = GetPressure(switchAlt);
             }
 
-            if (boost0 > 0)
+            if (boost0 > 0d)
             {
                 _boostMults[0] = boost0 / pres0;
                 _maxMP = wastegate;
                 retVal = true;
             }
-            if (boost1 > 0)
+            if (boost1 > 0d)
             {
                 _boostMults[1] = boost1 / pres1;
                 _boostCosts[1] = cost1;
             }
             else
             {
-                _boostMults[1] = 0f;
-                _boostCosts[1] = 0f;
+                _boostMults[1] = 0d;
+                _boostCosts[1] = 0d;
             }
-            if (switchAlt >= 0f)
-                _boostSwitch = (double)FlightGlobals.getStaticPressure(switchAlt, FlightGlobals.Bodies[1]) * 101325f;
+            if (switchAlt >= 0d)
+                _boostSwitch = switchpres;
             else
-                _boostSwitch = switchAlt;
+                _boostSwitch = 0d;
             MonoBehaviour.print("*AJE* Setting boost params. MaxMP = " + wastegate + ", boosts = " + _boostMults[0] + "/" + _boostMults[1] + ", switch " + _boostSwitch + " from " + boost0 + "@" + rated0 + ", " + boost1 + "@" + rated1);
-            _hasSuper = !turbo && boost0 > 1.0f;
+            _hasSuper = !turbo && boost0 > 1.0d;
             return retVal;
         }
 
