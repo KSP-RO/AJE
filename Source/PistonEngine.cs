@@ -56,6 +56,7 @@ namespace AJE
         public double _dOilTempdt;
         public double _power;
         public double _chargeTemp;
+        public double _chargeDensity;
         public double _totalPower;
         public double _engineThrust;
 
@@ -110,6 +111,7 @@ namespace AJE
             _charge = 1d;
             _chargeTarget = 1d;
             _turboLag = 2d;
+            _chargeDensity = 0d;
 
             // set reference conditions
             _power0 = power;
@@ -392,8 +394,8 @@ namespace AJE
             double swept_volume = (_displacement * speed * (1d/60d)) * 0.5d;
             double v_dot_air = swept_volume * GetPressureVE(pAmb, MAP, gamma) * _voleffic * _volEfficMult;
 
-            double rho_air_manifold = MAP / (RAir * GetCAT(MAP, pAmb, tAmb));
-            return v_dot_air * rho_air_manifold;
+            _chargeDensity = MAP / (RAir * GetCAT(MAP, pAmb, tAmb));
+            return v_dot_air * _chargeDensity;
         }
 
         // Gets the target for the [turbo]supercharger
@@ -592,7 +594,6 @@ namespace AJE
                 _totalPower = _power + _boostCosts[_boostMode];
                 _egt = GetEGT(efficiency, solver.t0, solver.Cp_c);
 
-
                 // Additional thrust from engine
                 // FIXME now that we calculate EGT should use that.
 
@@ -614,6 +615,8 @@ namespace AJE
                 // CTOK is there because tempdelta is expressed as a multiple of 0C-in-K (FIXME)
                 if(_meredithEffect != 0d)
                     _engineThrust += _meredithEffect * solver.Q * (tempDelta * 273.15d / solver.t0);
+
+                //MonoBehaviour.print("Engine running: HP " + power * W2HP + "/" + _totalPower * W2HP + ", rpm " + shaftRPM + ", mp " + _mp + ", charge " + _charge + ", cat " + _chargeTemp + ", chargeRho " + _chargeDensity + ", egt " + _egt + ", fuel " + _fuelFlow + ", airflow " + _airFlow + ", effic " + efficiency);
             }
             else
             {
@@ -623,7 +626,7 @@ namespace AJE
                 if (canStart)
                 {
                     _status = "Starter On";
-                    _power = _totalPower = 0.15d * _power0;
+                    _power = _totalPower = 0.2d * _power0;
                     _fuelFlow = _power * _bsfc * 0.2d;
                     _airFlow = _fuelFlow * 10d;
                     _mp = 0.15d * _maxMP;

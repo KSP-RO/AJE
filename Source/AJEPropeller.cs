@@ -54,6 +54,8 @@ namespace AJE
         public double coolerMin = -200f;
         [KSPField]
         public double ramAir = 0.2f;
+        [KSPField]
+        public bool useInHg = false;
 
         // Prop fields
         [KSPField(isPersistant = true, guiActive = false)]
@@ -118,7 +120,8 @@ namespace AJE
         //[KSPField(guiActive = true)]
         public float v;
 
-        public const double INHG2PA = 101325.0d / 760d * 1000d * 0.0254d; // 1 inch of Mercury in Pascals
+        public const double INHG2ATA = 1d / 760d * 1000d * 0.0254d; // 1 inch of Mercury in atmosphere-absolute
+        public const double INHG2PA = 101325.0d * INHG2ATA; // 1 inch of Mercury in Pascals
         public const double PA2INHG = 1d / INHG2PA;
         public const double CTOK = 273.15d;
 
@@ -182,6 +185,11 @@ namespace AJE
         #endregion
 
         #region Update methods
+        public override void UpdateThrottle()
+        {
+            currentThrottle = requestedThrottle; // instant throttle response
+            base.UpdateThrottle();
+        }
         public override void UpdateFlightCondition(EngineThermodynamics ambientTherm, double altitude, double vel, double mach, bool oxygen)
         {
             // change up the velocity vector, it's now vs the engine part.
@@ -194,13 +202,16 @@ namespace AJE
                 pistonEngine.SetWastegate(boost);
                 pistonEngine.SetMixture(mixture);
             }
+            solverProp.UpdateTweaks(CtTweak, CpTweak, VolETweak, MachPowTweak);
 
             base.UpdateFlightCondition(ambientTherm, altitude, vel, mach, oxygen);
         }
         public override void CalculateEngineParams()
         {
             base.CalculateEngineParams();
+            
             Fields["statusL2"].guiActive = true; // always show
+            statusL2 = solverProp.GetStatus();
 
             brakeHorsepower = (float)(solverProp.GetShaftPower() * PistonEngine.W2HP);
             if(pistonEngine != null)
@@ -240,18 +251,26 @@ namespace AJE
             CreateEngine();
             string output = GetBaseInfo();
             output += minRPM.ToString("N0") + " / " + maxRPM.ToString("N0") + " RPM, gearing " + gearratio.ToString("N3") + "\n";
+
             if (useOxygen && boost0 > 1d)
             {
-                output += "Max MP " + wastegateMP.ToString("N3") +" inHg, Rated: " + boost0.ToString("N2") + "ata at " + rated0.ToString("N1") + "km";
+                double ratingMult = 1d;
+                string ratingStr = "inHg";
+                if(!useInHg)
+                {
+                    ratingMult = INHG2ATA;
+                    ratingStr = "ata";
+                }
+                output += "Max MP " + (wastegateMP * ratingMult).ToString("N3") +ratingStr
+                    + "\nRated: " + (boost0 * ratingMult).ToString("N2") + ratingStr + " at " + rated0.ToString("N1") + "km";
                 if (boost1 > 1d)
                 {
-                    output += ", " + boost1.ToString("N2") + "ata at " + rated1.ToString("N1") + "km";
+                    output += " (1)\nRated: " + (boost1 * ratingMult).ToString("N2") + ratingStr + " at " + rated1.ToString("N1") + "km (2)";
                     if (switchAlt > 0d)
-                        output += ", switch " + switchAlt.ToString("N1") + "km";
+                        output += "\nSwitching at " + switchAlt.ToString("N1") + "km\n";
                     else
-                        output += ", autoswitching";
+                        output += "\nAuto-switching\n";
                 }
-                output += "\n";
             }
             output += "BSFC: " + BSFC + " kg/W-s\nPropeller: " + solverProp.GetDiameter().ToString("N2") + "m diameter";
             return output;

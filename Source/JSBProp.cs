@@ -229,7 +229,7 @@ namespace AJE
         {
 
             SetDefaults();
-            RPM = 30;
+            RPM = 0d;
             if (node != null)
                 Load(node);
             CalcDefaults();
@@ -239,7 +239,7 @@ namespace AJE
             SetDefaults();
 
 
-            RPM = 30;
+            RPM = 0d;
             ConfigNode node = null;
             foreach (ConfigNode n in GameDatabase.Instance.GetConfigNodes("PROPELLER"))
             {
@@ -563,9 +563,9 @@ namespace AJE
         public double GetPowerRequired(double rho, double Vel)
         {
             double cPReq, J;
-            double RPS = RPM / 60.0;
+            double RPS = RPM / 60d;
 
-            if (RPS != 0.0)
+            if (RPS != 0d)
                 J = Vel / (Diameter * RPS);
             else
                 J = Vel / Diameter;
@@ -591,7 +591,7 @@ namespace AJE
                             double dRPM = RPM - rpmReq;
                             // The pitch of a variable propeller cannot be changed when the RPMs are
                             // too low - the oil pump does not work.
-                            if (RPM > 200) Pitch += dRPM * deltaT;
+                            if (RPM > 200d) Pitch += dRPM * deltaT;
                             if (Pitch < MinPitch) Pitch = MinPitch;
                             else if (Pitch > MaxPitch) Pitch = MaxPitch;
 
@@ -603,7 +603,7 @@ namespace AJE
                             double PitchReq = MinPitch - (MinPitch - ReversePitch) * Reverse_coef;
                             // The pitch of a variable propeller cannot be changed when the RPMs are
                             // too low - the oil pump does not work.
-                            if (RPM > 200) Pitch += (PitchReq - Pitch) / 200;
+                            if (RPM > 200d) Pitch += (PitchReq - Pitch) / 200;
                             if (RPM > MaxRPM)
                             {
                                 Pitch += (MaxRPM - RPM) / 50;
@@ -616,7 +616,7 @@ namespace AJE
                     else  // Feathered propeller
                     {
                         // ToDo: Make feathered and reverse settings done via FGKinemat
-                        Pitch += (MaxPitch - Pitch) / 300; // just a guess (about 5 sec to fully feathered)
+                        Pitch += (MaxPitch - Pitch) * (1d / 300d); // just a guess (about 5 sec to fully feathered)
                         if (Pitch > MaxPitch)
                             Pitch = MaxPitch;
                     }
@@ -634,7 +634,7 @@ namespace AJE
             if (CpMach != null)
                 cPReq *= Math.Pow(CpMach.Evaluate((float)HelicalTipMach), MachPowTweak);
 
-            double local_RPS = RPS < 0.01 ? 0.01 : RPS;
+            double local_RPS = RPS < 0.01d ? 0.01d : RPS;
 
             PowerRequired = cPReq * local_RPS * RPS * local_RPS * D5 * rho;
             vTorque.x = (-Sense * PowerRequired / (local_RPS * 2.0 * Math.PI));
@@ -643,18 +643,18 @@ namespace AJE
         }
 
         /** Calculates and returns the thrust produced by this propeller.
-            Given the excess power available from the engine (in foot-pounds), the thrust is
+            Given the excess power available from the engine (in watts), the thrust is
             calculated, as well as the current RPM. The RPM is calculated by integrating
             the torque provided by the engine over what the propeller "absorbs"
             (essentially the "drag" of the propeller).
             @param PowerAvailable this is the excess power provided by the engine to
             accelerate the prop. It could be negative, dictating that the propeller
             would be slowed.
-            @return the thrust in pounds */
+            @return the thrust in newtons */
         public double Calculate(double EnginePower, double rho, double Vel, double speedOfSound)
         {
             double omega, PowerAvailable;
-            double RPS = RPM / 60d;
+            double RPS = RPM * (1d/ 60d);
             double machInv = 1d / speedOfSound;
             // Calculate helical tip Mach
             double Area = 0.25d * Diameter * Diameter * Math.PI;
@@ -736,7 +736,7 @@ namespace AJE
             else
                 ExcessTorque = PowerAvailable;
 
-            RPM = (RPS + ((ExcessTorque / Ixx) / (2d * Math.PI)) * deltaT) * 60d;
+            RPM = (RPS + (ExcessTorque / (Ixx  * 2d * Math.PI)) * deltaT) * 60d;
 
             if (RPM < 0d) RPM = 0d; // Engine won't turn backwards
 
@@ -751,6 +751,9 @@ namespace AJE
                 machDrag *= machDrag * D4 * RPS * RPS * rho * 0.00004d;
                 Thrust -= machDrag;
             }*/
+
+            //MonoBehaviour.print("Prop running: thrust " + Thrust + ", Ct " + ThrustCoeff + ", RPM " + RPM + ", PAvail " + PowerAvailable + ", J " + J);
+
             return Thrust;
         }
     }

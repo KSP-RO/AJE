@@ -105,7 +105,7 @@ namespace AJE
         public double GetPropPitch() { return propPitch; }
         public double GetShaftPower() { return shaftPower; }
 
-        public SolverPropeller(ITorqueProducer eng, double power, double sfc, double gear, string propName, double minR = -1, double maxR = -1, double diam = -1, double ixx = -1)
+        public SolverPropeller(ITorqueProducer eng, double power, double sfc, double gear, string propName, double minR, double maxR, double diam, double ixx)
         {
             engine = eng;
             maxPower = power;
@@ -134,9 +134,8 @@ namespace AJE
         public override void CalculatePerformance(double airRatio, double commandedThrottle, double flowMult, double ispMult)
         {
             base.CalculatePerformance(airRatio, commandedThrottle, flowMult, ispMult);
+
             shaftPower = 0d;
-            fuelFlow = 0d;
-            Isp = 0d;
             engineThrust = 0d;
             double deltaTime = TimeWarp.fixedDeltaTime;
             if (engine == null)
@@ -180,6 +179,7 @@ namespace AJE
                 combusting = fuelFlow > 0d;
                 fxPower = engine.GetFXPower();
                 engineThrust = engine.GetEngineThrust();
+                statusString = engine.GetStatus();
             }
 
             // now handle propeller
