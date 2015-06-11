@@ -307,12 +307,12 @@ namespace AJE
                     boostStr = "ata";
                 }
                 output += "Max MP " + (wastegateMP * ratingMult).ToString("N3") + boostStr
-                    + "\nRated: " + boost0.ToString("N2") + boostStr + " at " + rated0.ToString("N1") + "km";
+                    + "\nRated: " + boost0.ToString("N2") + boostStr + " at " + (rated0 * .001d).ToString("N1") + "km";
                 if (boost1 > 1d)
                 {
-                    output += " (1)\nRated: " + (boost1 * ratingMult).ToString("N2") + boostStr + " at " + rated1.ToString("N1") + "km , cost " + cost1.ToString("N0") + powerStr + " (2)";
+                    output += " (1)\nRated: " + (boost1 * ratingMult).ToString("N2") + boostStr + " at " + (rated1 * .001d).ToString("N1") + "km , cost " + cost1.ToString("N0") + powerStr + " (2)";
                     if (switchAlt > 0d)
-                        output += "\nSwitching at " + switchAlt.ToString("N1") + "km\n";
+                        output += "\nSwitching at " + (switchAlt * 0.001d).ToString("N1") + "km\n";
                     else
                         output += "\nAuto-switching\n";
                 }

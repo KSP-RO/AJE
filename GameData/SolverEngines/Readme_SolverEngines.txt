@@ -27,6 +27,10 @@ SolverEngines includes a GUI to display useful information about engines in flig
 See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
+v1.2
+* Made base members of the solver public for accessibility.
+* Added Q (dynamic pressure) as one of the base members.
+
 v1.1
 * Allow easier configuration of temperature gauge
 * Fix for flameout-at-zero-thrust
