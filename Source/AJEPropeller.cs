@@ -55,7 +55,9 @@ namespace AJE
         [KSPField]
         public double ramAir = 0.2f;
         [KSPField]
-        public bool useInHg = false;
+        public bool useInHg = true;
+        [KSPField]
+        public bool useHP = true;
 
         // Prop fields
         [KSPField(isPersistant = true, guiActive = false)]
@@ -67,29 +69,29 @@ namespace AJE
         #endregion
 
         #region Control/Display fields
-        [KSPField(guiActive = true, guiName = "Prop RPM", guiFormat = "0.##")]
+        [KSPField(guiActive = true, guiName = "Prop RPM", guiFormat = "N1")]
         public float propRPM = 0f;
 
-        [KSPField(guiActive = true, guiName = "Prop Pitch", guiUnits = " deg.")]
+        [KSPField(guiActive = true, guiName = "Prop Pitch", guiFormat = "N1", guiUnits = " deg.")]
         public float propPitch = 0.0f;
 
-        [KSPField(guiActive = true, guiName = "Prop Thrust", guiFormat = "0.###", guiUnits = " kN")]
+        [KSPField(guiActive = true, guiName = "Prop Thrust", guiFormat = "N3", guiUnits = " kN")]
         public float propThrust = 0f;
 
-        [KSPField(guiActive = true, guiName = "Manifold Pressure", guiFormat = "0.###", guiUnits = " inHg")]
+        [KSPField(guiActive = true, guiName = "Manifold Pressure", guiFormat = "N3", guiUnits = "inHg")]
         public float manifoldPressure = 0.0f;
 
-        [KSPField(isPersistant = false, guiActive = true, guiName = "Charge Air Temp", guiFormat = "0.###", guiUnits = " K")]
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Charge Air Temp", guiFormat = "N2", guiUnits = " K")]
         public float chargeAirTemp = 288.0f;
 
-        [KSPField(guiActive = true, guiName = "Exhaust Thrust", guiFormat = "0.###", guiUnits = " kN")]
+        [KSPField(guiActive = true, guiName = "Exhaust Thrust", guiFormat = "N5", guiUnits = " kN")]
         public float netExhaustThrust = 0.0f;
 
-        [KSPField(guiActive = true, guiName = "Meredith Effect", guiFormat = "0.###", guiUnits = " kN")]
+        [KSPField(guiActive = true, guiName = "Meredith Effect", guiFormat = "N5", guiUnits = " kN")]
         public float netMeredithEffect = 0.0f;
 
-        [KSPField(guiActive = true, guiName = "Brake Horsepower", guiFormat = "0", guiUnits = " HP")]
-        public float brakeHorsepower = 0f;
+        [KSPField(guiActive = true, guiName = "Brake Shaft Power", guiFormat = "N0", guiUnits = "HP")]
+        public float brakeShaftPower = 0f;
 
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Boost", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.01f)]
         public float boost = 1.0f;
@@ -133,20 +135,58 @@ namespace AJE
 
         protected PistonEngine pistonEngine;
         protected SolverPropeller solverProp;
+
+        // multipliers
+        protected double boostMultiplier;
+        protected double boostMultiplierRecip;
+        protected double powerMultiplier;
+        protected double powerMultiplierRecip;
+        protected double displMultiplier;
+        protected string powerStr = "HP";
+        protected string boostStr = "inHg";
         #endregion
         #endregion
 
         #region Setup methods
+        protected void SetUnits()
+        {
+            if (useInHg)
+            {
+                boostMultiplier = INHG2PA;
+                boostStr = "inHg";
+            }
+            else
+            {
+                boostMultiplier = 101325d; // atm to PA
+                boostStr = "ata";
+            }
+            boostMultiplierRecip = 1d / boostMultiplier;
+
+            if (useHP)
+            {
+                powerMultiplier = PistonEngine.HP2W;
+                powerStr = "HP";
+                displMultiplier = PistonEngine.CIN2CM;
+            }
+            else
+            {
+                powerMultiplier = PistonEngine.PS2W;
+                powerStr = "PS";
+                displMultiplier = 0.001d; // liters to cubic meters
+            }
+            powerMultiplierRecip = 1d / powerMultiplier;
+        }
         public override void CreateEngine()
         {
+            SetUnits();
+
             pistonEngine = null;
-            
-            double powW = power * PistonEngine.HP2W;
             
             if (maxEngineTemp == 0d)
                 maxEngineTemp = 3600d;
             heatProduction = 10f; // HACK fixme. But we don't want to create much heat in the part.
 
+            double powW = power * powerMultiplier;
             if (useOxygen)
             {
                 pistonEngine = new PistonEngine(
@@ -154,14 +194,14 @@ namespace AJE
                     maxRPM,
                     BSFC,
                     ramAir,
-                    displacement * PistonEngine.CIN2CM,
+                    displacement * displMultiplier,
                     compression,
                     coolerEffic,
                     coolerMin + CTOK,
                     exhaustThrust,
                     meredithEffect,
                     // Super/turbo params:
-                    wastegateMP * INHG2PA, boost0 * INHG2PA, boost1 * INHG2PA, rated0, rated1, cost1 * PistonEngine.HP2W, switchAlt, turbo
+                    wastegateMP * boostMultiplier, boost0 * boostMultiplier, boost1 * boostMultiplier, rated0, rated1, cost1 * powerMultiplier, switchAlt, turbo
                     );
             }
             engineSolver = solverProp = new SolverPropeller(pistonEngine, powW, BSFC, gearratio, propName, minRPM * gearratio, maxRPM * gearratio, propDiam, propIxx);
@@ -215,10 +255,10 @@ namespace AJE
             Fields["statusL2"].guiActive = true; // always show
             statusL2 = solverProp.GetStatus();
 
-            brakeHorsepower = (float)(solverProp.GetShaftPower() * PistonEngine.W2HP);
+            brakeShaftPower = (float)(solverProp.GetShaftPower() * powerMultiplierRecip);
             if(pistonEngine != null)
             {
-                manifoldPressure = (float)(pistonEngine.GetMAP() * PA2INHG);
+                manifoldPressure = (float)(pistonEngine.GetMAP() * boostMultiplierRecip);
                 chargeAirTemp = (float)pistonEngine.GetChargeTemp();
             }
             propRPM = (float)solverProp.GetPropRPM();
@@ -230,7 +270,10 @@ namespace AJE
         #region Info methods
         public string GetBaseInfo()
         {
+            SetUnits();
+
             string output = "";
+
             if(useOxygen && boost0 > 1d)
             {
                 if(turbo)
@@ -238,7 +281,7 @@ namespace AJE
                 else
                     output += "Supercharged, ";
             }
-            return output + power + "HP\n";
+            return output + power + powerStr + "\n";
         }
         public override string GetModuleTitle()
         {
@@ -253,22 +296,21 @@ namespace AJE
         {
             CreateEngine();
             string output = GetBaseInfo();
+
             output += minRPM.ToString("N0") + " / " + maxRPM.ToString("N0") + " RPM, gearing " + gearratio.ToString("N3") + "\n";
 
             if (useOxygen && boost0 > 1d)
             {
                 double ratingMult = 1d;
-                string ratingStr = "inHg";
                 if(!useInHg)
                 {
-                    ratingMult = INHG2ATA;
-                    ratingStr = "ata";
+                    boostStr = "ata";
                 }
-                output += "Max MP " + (wastegateMP * ratingMult).ToString("N3") +ratingStr
-                    + "\nRated: " + (boost0 * ratingMult).ToString("N2") + ratingStr + " at " + rated0.ToString("N1") + "km";
+                output += "Max MP " + (wastegateMP * ratingMult).ToString("N3") + boostStr
+                    + "\nRated: " + boost0.ToString("N2") + boostStr + " at " + rated0.ToString("N1") + "km";
                 if (boost1 > 1d)
                 {
-                    output += " (1)\nRated: " + (boost1 * ratingMult).ToString("N2") + ratingStr + " at " + rated1.ToString("N1") + "km (2)";
+                    output += " (1)\nRated: " + (boost1 * ratingMult).ToString("N2") + boostStr + " at " + rated1.ToString("N1") + "km , cost " + cost1.ToString("N0") + powerStr + " (2)";
                     if (switchAlt > 0d)
                         output += "\nSwitching at " + switchAlt.ToString("N1") + "km\n";
                     else
@@ -299,6 +341,10 @@ namespace AJE
                 Fields["CpTweak"].guiActive = Fields["CpTweak"].guiActiveEditor =
                 Fields["VolETweak"].guiActive = Fields["VolETweak"].guiActiveEditor =
                 Fields["MachPowTweak"].guiActive = Fields["MachPowTweak"].guiActiveEditor = debugFields;
+
+            // set units
+            Fields["manifoldPressure"].guiUnits = boostStr;
+            Fields["brakeShaftPower"].guiUnits = powerStr;
         }
         #endregion
     }

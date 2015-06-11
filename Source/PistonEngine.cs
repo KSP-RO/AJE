@@ -62,14 +62,16 @@ namespace AJE
 
         public const double HP2W = 745.699872d;
         public const double W2HP = 1d / HP2W;
+        public const double PS2W = 735.49875d;
+        public const double W2PS = 1d / PS2W;
         public const double LBFTON = 4.44822162d; // 1 pound-force in newtons
         public const double CIN2CM = 1.6387064e-5d;
         public const double RPM2RADPS = 1d / 60d * (2d * Math.PI);
         public const double RADPS2RPM = 1d / RPM2RADPS;
         public FloatCurve mixtureEfficiency; //fuel:air -> efficiency
 
-        const double T0 = 288.15d;
-        const double P0 = 100000d; // was 101325, but rounding.
+        const double T0 = 288.15d; // 15C, reference temp at sea level
+        const double P0 = 101325d;
         const double RAIR0 = 287d;
         const double GAMMA0 = 1.4d;
         #endregion
