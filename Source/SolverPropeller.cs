@@ -86,6 +86,7 @@ namespace AJE
         protected double maxRPMRecip = 1d / 60d;
         protected double diameter = 2d;
         protected double ixx = 0.1d;
+        protected double rpmLever = 1d;
 
         // engine stats
         double maxPower = 1d;
@@ -103,6 +104,7 @@ namespace AJE
         public double GetDiameter() { return diameter; }
         public double GetPropRPM() { return propRPM; }
         public double GetPropPitch() { return propPitch; }
+        public double GetPropThrust() { return propThrust; }
         public double GetShaftPower() { return shaftPower; }
 
         public SolverPropeller(ITorqueProducer eng, double power, double sfc, double gear, string propName, double minR, double maxR, double diam, double ixx)
@@ -123,13 +125,15 @@ namespace AJE
 
         }
 
-        public void UpdateTweaks(double CtTweak, double CpTweak, double VolETweak, double MachPowTweak)
+        public void SetTweaks(double CtTweak, double CpTweak, double VolETweak, double MachPowTweak)
         {
             propJSB.SetTweaks(CtTweak, CpTweak, MachPowTweak);
             powerTweak = VolETweak;
             if (engine != null)
                 engine.SetMultiplier(powerTweak);
         }
+
+        public void SetRPMLever(double val) { rpmLever = val; }
 
         public override void CalculatePerformance(double airRatio, double commandedThrottle, double flowMult, double ispMult)
         {
@@ -185,9 +189,8 @@ namespace AJE
             // now handle propeller
             if (rho > 0d)
             {
-                propJSB.deltaT = (float)TimeWarp.fixedDeltaTime;
-                propJSB.SetAdvance(propRPM);
-                propThrust = propJSB.Calculate(shaftPower, rho, vel, eair0);
+                propJSB.SetAdvance(rpmLever);
+                propThrust = propJSB.Calculate(shaftPower, rho, vel, eair0, TimeWarp.fixedDeltaTime);
                 propRPM = propJSB.GetRPM();
                 propPitch = (float)propJSB.GetPitch();
 

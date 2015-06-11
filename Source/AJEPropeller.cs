@@ -94,7 +94,7 @@ namespace AJE
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Boost", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.01f)]
         public float boost = 1.0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "RPM Lever", guiFormat = "0.##"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.01f)]
-        public float RPM = 1.0f;
+        public float rpmLever = 1.0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Mixture", guiFormat = "0.###"), UI_FloatRange(minValue = 0.0f, maxValue = 1.0f, stepIncrement = 0.005f)]
         public float mixture = 0.7f; // optimal "auto rich"
         #endregion
@@ -202,7 +202,9 @@ namespace AJE
                 pistonEngine.SetWastegate(boost);
                 pistonEngine.SetMixture(mixture);
             }
-            solverProp.UpdateTweaks(CtTweak, CpTweak, VolETweak, MachPowTweak);
+            // set prop (+ engine) params
+            solverProp.SetRPMLever(rpmLever);
+            solverProp.SetTweaks(CtTweak, CpTweak, VolETweak, MachPowTweak);
 
             base.UpdateFlightCondition(ambientTherm, altitude, vel, mach, oxygen);
         }
@@ -221,6 +223,7 @@ namespace AJE
             }
             propRPM = (float)solverProp.GetPropRPM();
             propPitch = (float)solverProp.GetPropPitch();
+            propThrust = (float)(solverProp.GetPropThrust() * 0.001d);
         }
         #endregion
 

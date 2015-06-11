@@ -563,7 +563,7 @@ namespace AJE
         public double GetPowerRequired(double rho, double Vel)
         {
             double cPReq, J;
-            double RPS = RPM / 60d;
+            double RPS = RPM * (1d / 60d);
 
             if (RPS != 0d)
                 J = Vel / (Diameter * RPS);
@@ -588,13 +588,12 @@ namespace AJE
                         if (!Reversed)
                         {
                             double rpmReq = MinRPM + (MaxRPM - MinRPM) * Advance;
-                            double dRPM = RPM - rpmReq;
+                            double dRPM = rpmReq - RPM;
                             // The pitch of a variable propeller cannot be changed when the RPMs are
                             // too low - the oil pump does not work.
-                            if (RPM > 200d) Pitch += dRPM * deltaT;
+                            if (RPM > 200d) Pitch -= dRPM * deltaT;
                             if (Pitch < MinPitch) Pitch = MinPitch;
                             else if (Pitch > MaxPitch) Pitch = MaxPitch;
-
                         }
                         else // Reversed propeller
                         {
@@ -603,7 +602,7 @@ namespace AJE
                             double PitchReq = MinPitch - (MinPitch - ReversePitch) * Reverse_coef;
                             // The pitch of a variable propeller cannot be changed when the RPMs are
                             // too low - the oil pump does not work.
-                            if (RPM > 200d) Pitch += (PitchReq - Pitch) / 200;
+                            if (RPM > 200d) Pitch += (PitchReq - Pitch) * (1d / 200d);
                             if (RPM > MaxRPM)
                             {
                                 Pitch += (MaxRPM - RPM) / 50;
@@ -651,8 +650,9 @@ namespace AJE
             accelerate the prop. It could be negative, dictating that the propeller
             would be slowed.
             @return the thrust in newtons */
-        public double Calculate(double EnginePower, double rho, double Vel, double speedOfSound)
+        public double Calculate(double EnginePower, double rho, double Vel, double speedOfSound, double deltaTime)
         {
+            deltaT = deltaTime;
             double omega, PowerAvailable;
             double RPS = RPM * (1d/ 60d);
             double machInv = 1d / speedOfSound;
@@ -736,7 +736,7 @@ namespace AJE
             else
                 ExcessTorque = PowerAvailable;
 
-            RPM = (RPS + (ExcessTorque / (Ixx  * 2d * Math.PI)) * deltaT) * 60d;
+            RPM = (RPS + (ExcessTorque / (Ixx * 2.0 * Math.PI) * deltaT)) * 60d;
 
             if (RPM < 0d) RPM = 0d; // Engine won't turn backwards
 
@@ -752,7 +752,7 @@ namespace AJE
                 Thrust -= machDrag;
             }*/
 
-            //MonoBehaviour.print("Prop running: thrust " + Thrust + ", Ct " + ThrustCoeff + ", RPM " + RPM + ", PAvail " + PowerAvailable + ", J " + J);
+            //MonoBehaviour.print("Prop running: thrust " + Thrust + ", Ct " + ThrustCoeff + ", RPM " + RPM + ", PAvail " + PowerAvailable + ", J " + J + ", delta RPM " + (RPM - RPS * 60d));
 
             return Thrust;
         }

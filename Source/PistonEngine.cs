@@ -69,7 +69,7 @@ namespace AJE
         public FloatCurve mixtureEfficiency; //fuel:air -> efficiency
 
         const double T0 = 288.15d;
-        const double P0 = 101325d;
+        const double P0 = 100000d; // was 101325, but rounding.
         const double RAIR0 = 287d;
         const double GAMMA0 = 1.4d;
         #endregion
