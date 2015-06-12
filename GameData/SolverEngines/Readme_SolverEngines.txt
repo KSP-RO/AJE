@@ -27,6 +27,9 @@ SolverEngines includes a GUI to display useful information about engines in flig
 See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
+v1.3
+* Pass velocity as a Vector3d (vel in the solver is still a double).
+
 v1.2
 * Made base members of the solver public for accessibility.
 * Added Q (dynamic pressure) as one of the base members.

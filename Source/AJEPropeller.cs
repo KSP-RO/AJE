@@ -120,7 +120,7 @@ namespace AJE
 
         #region Internal Fields
         //[KSPField(guiActive = true)]
-        public float v;
+        public double v;
 
         public const double INHG2ATA = 1d / 760d * 1000d * 0.0254d; // 1 inch of Mercury in atmosphere-absolute
         public const double INHG2PA = 101325.0d * INHG2ATA; // 1 inch of Mercury in Pascals
@@ -230,10 +230,11 @@ namespace AJE
             currentThrottle = requestedThrottle; // instant throttle response
             base.UpdateThrottle();
         }
-        public override void UpdateFlightCondition(EngineThermodynamics ambientTherm, double altitude, Vector3 vel, double mach, bool oxygen)
+        public override void UpdateFlightCondition(EngineThermodynamics ambientTherm, double altitude, Vector3d vel, double mach, bool oxygen)
         {
             // change up the velocity vector, it's now vs the engine part.
-            v = (float)Vector3.Dot(vel, -thrustTransforms[0].forward.normalized);
+            v = Vector3d.Dot(vel, -thrustTransforms[0].forward);
+            vel = (Vector3d)thrustTransforms[0].forward * -v;
 
             // set engine params prior to calculation
             if (pistonEngine != null)

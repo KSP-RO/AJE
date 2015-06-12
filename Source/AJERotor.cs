@@ -79,7 +79,7 @@ namespace AJE
             base.UpdateThrottle();
         }
 
-        public override void UpdateFlightCondition(EngineThermodynamics ambientTherm, double altitude, Vector3 vel, double mach, bool oxygen)
+        public override void UpdateFlightCondition(EngineThermodynamics ambientTherm, double altitude, Vector3d vel, double mach, bool oxygen)
         {
             Vector3 t = thrustTransforms[0].forward.normalized;
 
