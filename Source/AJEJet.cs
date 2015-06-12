@@ -134,7 +134,7 @@ namespace AJE
             bool oldE = EngineIgnited;
             EngineIgnited = true;
             
-            UpdateFlightCondition(ambientTherm, 0d, Vector3.zero, 0d, true);
+            UpdateFlightCondition(ambientTherm, 0d, Vector3d.zero, 0d, true);
             double thrust = (engineSolver.GetThrust() * 0.001d);
 
             if (CPR == 1f) // ramjet
@@ -160,7 +160,7 @@ namespace AJE
                     if (!primaryField)
                         output += "\n   <b>SFC: </b>" + (1d / engineSolver.GetIsp() * 3600d).ToString("N4") + " kg/kgf-h";
                     currentThrottle = 2f / 3f;
-                    UpdateFlightCondition(ambientTherm, 0d, Vector3.zero, 0d, true);
+                    UpdateFlightCondition(ambientTherm, 0d, Vector3d.zero, 0d, true);
                     thrust = (engineSolver.GetThrust() * 0.001d);
                     output += "\n<b>Static Thrust (dry): </b>" + thrust.ToString("N2") + " kN";
                     if (!primaryField)
