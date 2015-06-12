@@ -32,8 +32,8 @@
     </Compile>
     <Compile Include="AJEPropeller.cs" />
     <Compile Include="AJERotor.cs" />
+    <Compile Include="SolverRotor.cs" />
     <Compile Include="SolverJet.cs" />
-    <Compile Include="EngineWrapper.cs" />
     <Compile Include="JSBProp.cs" />
     <Compile Include="PistonEngine.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

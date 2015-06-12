@@ -3,11 +3,16 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using KSP;
+using SolverEngines;
 
 namespace AJE
 {
-    public class AJERotor:PartModule
+    public class ModuleEnginesAJERotor : ModuleEnginesSolver, IModuleInfo
     {
+        #region Fields
+
+        #region Loadable Fields
+
         [KSPField(isPersistant = false, guiActive = false)]
         public bool useOxygen = true;
         [KSPField(isPersistant = false, guiActive = false)]
@@ -25,143 +30,139 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public float BSFC;
         [KSPField(isPersistant = false, guiActive = false)]
-        public float maxThrust = 99999;
-        [KSPField(isPersistant = false, guiActive = false)]
         public float VTOLbuff = -1f;
 
+        #endregion
 
- //       [KSPField(isPersistant = false, guiActive = true)]
-        public float vx;
-  //      [KSPField(isPersistant = false, guiActive = true)]
-        public float vz;
-        [KSPField(isPersistant = false, guiActive = true)]
-        public string ShaftPower;
+        #region Display Fields
 
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Shaft Power", guiFormat = "F0", guiUnits = "HP")]
+        public float ShaftPower;
 
-        public EngineWrapper engine;
-        public AJERotorSolver aje;
-        public ModuleReactionWheel sas;
-        public float sasP,sasY,sasR;
+        #endregion
 
-        public override void OnStart(StartState state)
+        #region Internal Fields
+
+        protected ModuleReactionWheel sas;
+        protected float sasP, sasY, sasR;
+        protected float vx, vz;
+
+        #endregion
+
+        #endregion
+
+        #region Setup Methods
+
+        public override void CreateEngine()
         {
-            if (state == StartState.Editor)
-                return;
-            if (vessel == null)
-                return;
-            engine = new EngineWrapper(part);
-            engine.IspMultiplier = IspMultiplier;
-            engine.idle = idle;
-            engine.useVelCurve = false;
-            engine.useAtmCurve = false;
-            engine.ThrustUpperLimit = maxThrust;
+            if (maxEngineTemp == 0d)
+                maxEngineTemp = part.maxTemp;
+
             float omega = rpm * 0.1047f;
 //            power *= 745.7f;
-            aje = new AJERotorSolver(omega, r, weight, power * 745.7f, 1.2f, VTOLbuff);
-            sas = (ModuleReactionWheel)part.Modules["ModuleReactionWheel"];
+            engineSolver = new SolverRotor(omega, r, weight, power * 745.7f, 1.2f, VTOLbuff, BSFC, useOxygen);
+            sas = part.FindModuleImplementing<ModuleReactionWheel>();
             sasP = sas.PitchTorque;
             sasY = sas.YawTorque;
             sasR = sas.RollTorque;
+
+            useAtmCurve = atmChangeFlow = useVelCurve = false;
         }
 
-        public void FixedUpdate()
+        #endregion
+
+        #region Update Methods
+
+        public override void UpdateThrottle()
         {
-            if (HighLogic.LoadedSceneIsEditor)
-                return;
-            if (engine.type == EngineWrapper.EngineType.NONE || !engine.EngineIgnited)
-                return;
-            if ((!vessel.mainBody.atmosphereContainsOxygen && useOxygen) || part.vessel.altitude > vessel.mainBody.atmosphereDepth)
-            {
-                engine.SetEngineParams(0, 1000);
-                return;
-            }
+            currentThrottle = requestedThrottle; // instant throttle response
+            base.UpdateThrottle();
+        }
 
-            
-            Vector3d V = vessel.srf_velocity;
-            Vector3d t = part.FindModelTransform(engine.thrustVectorTransformName).forward.normalized;
+        public override void UpdateFlightCondition(EngineThermodynamics ambientTherm, double altitude, Vector3 vel, double mach, bool oxygen)
+        {
+            Vector3 t = thrustTransforms[0].forward.normalized;
 
-            vx = (float)Vector3d.Cross(V, t).magnitude;
-            vz = -(float)Vector3d.Dot(V, t);
+            vx = (float)Vector3.Cross(vel, t).magnitude;
+            vz = -(float)Vector3.Dot(vel, t);
 
+            (engineSolver as SolverRotor).UpdateFlightParams(vx, vz);
 
+            base.UpdateFlightCondition(ambientTherm, altitude, vel, mach, oxygen);
+        }
 
-            float pressure = (float)FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody); // include dynamic pressure
-            float temperature = (float)FlightGlobals.getExternalTemperature((float)vessel.altitude, vessel.mainBody);
-            float density = (float)FlightGlobals.getAtmDensity(pressure, temperature, vessel.mainBody);
+        public override void CalculateEngineParams()
+        {
+            base.CalculateEngineParams();
 
-            aje.calc(density, vx, vz, weight*9.801f);
-
-
-     //       engine.SetThrust(aje.lift / 1000f);
-            float isp = aje.lift / 9.801f / BSFC / aje.power;
-     //       engine.SetIsp(isp);
-            engine.SetEngineParams(aje.lift / 1000 / 9.801f / isp, isp);
-            ShaftPower = ((int)(aje.power / 745.7f)).ToString() + "HP";
+            ShaftPower = (float)(engineSolver as SolverRotor).GetPower() / 745.7f;
 
             if (sas != null)
             {
-                float sasMultiplier = aje.lift / weight / 9.801f;
-                if (sasMultiplier < 0)
-                    sasMultiplier = 0;
+                float sasMultiplier = (float)(engineSolver as SolverRotor).SASMultiplier();
                 sas.PitchTorque = sasP * sasMultiplier;
                 sas.YawTorque = sasY * sasMultiplier;
                 sas.RollTorque = sasR * sasMultiplier;
             }
         }
 
+        #endregion
 
+        #region Info Methods
 
-
-
-
-
-    }
-
-    public class AJERotorSolver
-    {
-        public float omega, r, weight, power0, rho0;
-        public float lift, power, tilt;
-        public float ldr, torque;
-        public float buff;
-      
-        const float PI = 3.1416f;
-
-        public AJERotorSolver(float omega, float r, float weight, float power0, float rho0, float buff)
+        public override string GetModuleTitle()
         {
-            this.omega = omega;
-            this.r = r;
-            this.weight = weight;
-            this.power0 = power0;
-            this.rho0 = rho0;
-            this.buff = buff;
-
-            ldr = 3 * r * 9.801f * weight * omega / 4 / power0;
+            return "AJE Rotor";
         }
 
-        public void calc(float rho, float vx, float vz, float gravity)
+        public string GetStaticThrustInfo()
         {
-            power = power0 * Mathf.Min(1, rho / rho0);
+            string output = "";
+            if (engineSolver == null || !(engineSolver is SolverRotor))
+                CreateEngine();
 
-            float x = vz * gravity / power;
-            torque = power / omega / Mathf.Pow((x / buff + 1), buff);
+            // get stats
+            double pressure = 101.325d, temperature = 288.15d, density = 1.225d;
+            if (Planetarium.fetch != null)
+            {
+                CelestialBody home = Planetarium.fetch.Home;
+                if (home != null)
+                {
+                    pressure = home.GetPressure(0d);
+                    temperature = home.GetTemperature(0d);
+                    density = home.GetDensity(pressure, temperature);
+                }
+            }
+            ambientTherm = new EngineThermodynamics();
+            ambientTherm.FromAmbientConditions(pressure, temperature, density);
 
-            float CLift = omega * omega * r * r * r / 3 + vx * vx * r / 4 / PI;
+            currentThrottle = 1f;
+            lastPropellantFraction = 1d;
+            bool oldE = EngineIgnited;
+            EngineIgnited = true;
 
-            float CTorq = omega * omega * r * r * r * r / 4 + vx * vx * r * r / 8 / PI;
+            UpdateFlightCondition(ambientTherm, 0d, Vector3.zero, 0d, true);
+            double thrust = (engineSolver.GetThrust() * 0.001d);
+            double power = ((engineSolver as SolverRotor).GetPower() / 745.7d);
 
-            //          float CTilt = omega * r * r * r * vx / PI + r * vx * vx * vx / omega;
+            output += "<b>Static Power: </b>" + power.ToString("F0") + " HP\n";
+            output += "<b>Static Thrust: </b>" + thrust.ToString("F2") + " kN\n";
 
-            lift = torque * ldr * CLift / CTorq;
-            //           tilt = lift / CLift * CTilt;
-        
-      
-                
+            EngineIgnited = oldE;
 
+            return output;
         }
 
+        public override string GetInfo()
+        {
+            return GetStaticThrustInfo();
+        }
 
+        public override string GetPrimaryField()
+        {
+            return GetStaticThrustInfo();
+        }
 
+        #endregion
     }
-
-
 }
