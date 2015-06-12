@@ -230,11 +230,10 @@ namespace AJE
             currentThrottle = requestedThrottle; // instant throttle response
             base.UpdateThrottle();
         }
-        public override void UpdateFlightCondition(EngineThermodynamics ambientTherm, double altitude, double vel, double mach, bool oxygen)
+        public override void UpdateFlightCondition(EngineThermodynamics ambientTherm, double altitude, Vector3 vel, double mach, bool oxygen)
         {
             // change up the velocity vector, it's now vs the engine part.
-            vel = Vector3.Dot(vessel.srf_velocity, -thrustTransforms[0].forward.normalized);
-            v = (float)vel;
+            v = (float)Vector3.Dot(vel, -thrustTransforms[0].forward.normalized);
 
             // set engine params prior to calculation
             if (pistonEngine != null)
