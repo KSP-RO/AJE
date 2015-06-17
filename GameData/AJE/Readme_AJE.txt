@@ -1,4 +1,4 @@
-AJE is by camlost, with a bit of code here and there by NathanKell
+AJE is by camlost, with some code by NathanKell and blowfish
 
 For docs and readme see the forum thread.
 http://forum.kerbalspaceprogram.com/threads/70008
