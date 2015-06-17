@@ -1,4 +1,5 @@
 AJE is by camlost, with some code by NathanKell and blowfish
+AJE includes repainted assets from B9 Aerospace by bac9 and Taverius, used by permission of CC-BY-NC-SA license.
 
 For docs and readme see the forum thread.
 http://forum.kerbalspaceprogram.com/threads/70008
