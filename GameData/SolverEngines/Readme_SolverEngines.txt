@@ -27,6 +27,9 @@ SolverEngines includes a GUI to display useful information about engines in flig
 See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
+v1.4
+* Make the "can't start engine in fairing/bay" functionality toggleable, and default to off.
+
 v1.3
 * Pass velocity as a Vector3d (vel in the solver is still a double).
 
