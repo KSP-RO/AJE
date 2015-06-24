@@ -28,7 +28,9 @@ See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
 v1.4
-* Make the "can't start engine in fairing/bay" functionality toggleable, and default to off.
+* Make the "can't start engine in fairing/bay" functionality toggleable ( noShieldedStart in the MODULE), and default to off.
+* Speed things up a little in the GUI/VesselModule
+* Changed GUI namespace to avoid an issue with Toolbar.
 
 v1.3
 * Pass velocity as a Vector3d (vel in the solver is still a double).
