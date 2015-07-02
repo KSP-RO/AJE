@@ -160,7 +160,7 @@ namespace AJE
 
             inletTherm = new EngineThermodynamics();
             inletTherm.CopyFrom(ambientTherm);
-            inletTherm.P *= 0.987654d * 0.987654d * defaultTPR; // Static cosine
+            inletTherm.P *= AJEInlet.OverallStaticTPR(defaultTPR);
 
             areaRatio = 1d;
             currentThrottle = 1f;
