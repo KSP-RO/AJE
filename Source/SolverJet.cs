@@ -117,6 +117,11 @@ namespace AJE
 
         }
 
+        public void UpdateArea(double newArea)
+        {
+            Aref = newArea;
+        }
+
         public override void CalculatePerformance(double airRatio, double commandedThrottle, double flowMult, double ispMult)
         {
             // set base bits
@@ -310,6 +315,20 @@ namespace AJE
                 fxPower = (float)mainThrottle;
             else
                 fxPower = (float)(mainThrottle * 0.25d + abThrottle * 0.75d);
+        }
+
+        public void FitEngine(ModuleEnginesAJEJet engineModule)
+        {
+            float TPR = AJEInlet.OverallStaticTPR(engineModule.defaultTPR);
+            SetEngineState(true, 1d);
+            SetStaticConditions(overallTPR : TPR);
+            double throttle = Tt7 > 0d ? 2d / 3d : 1d;
+            CalculatePerformance(1d, throttle, 1d, 1d);
+
+            System.Diagnostics.Debug.Assert(engineModule.Area == Aref);
+            Aref *= engineModule.dryThrust * 1000d / thrust;
+
+            engineModule.Area = (float)Aref;
         }
 
         public override double GetEngineTemp() { return T3; }

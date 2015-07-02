@@ -11,41 +11,60 @@ using SolverEngines;
 namespace AJE
 {
 
-
     public class ModuleEnginesAJEJet : ModuleEnginesSolver, IModuleInfo
     {
+        [EngineFitResult]
         [KSPField(isPersistant = false, guiActive = false)]
         public float Area = 0.1f;
+        [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float BPR = 0;
+        [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float CPR = 20;
+        [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float FPR = 1;
+        [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float Mdes = 0.9f;
+        [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float Tdes = 250;
+        [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float eta_c = 0.95f;
+        [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float eta_t = 0.98f;
+        [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float eta_n = 0.9f;
+        [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float FHV = 46.8E6f;
+        [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float TIT = 1200;
+        [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float TAB = 0;
+        [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public bool exhaustMixer = false;
+        [EngineParameter]
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float defaultTPR = 1f;
+
         [KSPField(isPersistant = false, guiActive = false)]
         public float maxT3 = 9999;
 
+        [EngineFitData]
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float dryThrust = 0f;
+
         [KSPField(isPersistant = false, guiActive = true, guiName = "Compression Ratio", guiFormat = "F1")]
         public float prat3 = 0f;
-
         
         public override void CreateEngine()
         {
@@ -73,6 +92,12 @@ namespace AJE
 
             if (CPR == 1f)
                 Fields["prat3"].guiActive = false;
+        }
+
+        public override void CreateEngineIfNecessary()
+        {
+            if (engineSolver == null || !(engineSolver is SolverJet))
+                CreateEngine();
         }
 
         public override void UpdateThrottle()
@@ -103,30 +128,39 @@ namespace AJE
             prat3 = (float)(engineSolver as SolverJet).Prat3;
         }
 
+        #region Engine Fitting
+
+        public override bool CanFitEngine()
+        {
+            return (dryThrust > 0f) & (CPR > 1f);
+        }
+
+        public override void PushFitParamsToSolver()
+        {
+            (engineSolver as SolverJet).UpdateArea(Area);
+        }
+
+        public override void DoEngineFit()
+        {
+            (engineSolver as SolverJet).FitEngine(this);
+        }
+
+        #endregion
+
+        #region Info
+
         public string GetStaticThrustInfo(bool primaryField)
         {
             string output = "";
-            if (engineSolver == null || !(engineSolver is SolverJet))
-                CreateEngine();
+            CreateEngineIfNecessary();
 
-            // get stats
-            double pressure = 101.325d, temperature = 288.15d, density = 1.225d;
-            if (Planetarium.fetch != null)
-            {
-                CelestialBody home = Planetarium.fetch.Home;
-                if (home != null)
-                {
-                    pressure = home.GetPressure(0d);
-                    temperature = home.GetTemperature(0d);
-                    density = home.GetDensity(pressure, temperature);
-                }
-            }
+            FitEngineIfNecessary();
             ambientTherm = new EngineThermodynamics();
-            ambientTherm.FromAmbientConditions(pressure, temperature, density);
+            ambientTherm.FromStandardConditions(true);
 
             inletTherm = new EngineThermodynamics();
             inletTherm.CopyFrom(ambientTherm);
-            inletTherm.P *= 0.987654d * 0.987654d; // Static cosine
+            inletTherm.P *= 0.987654d * 0.987654d * defaultTPR; // Static cosine
 
             areaRatio = 1d;
             currentThrottle = 1f;
@@ -216,6 +250,9 @@ namespace AJE
 
             return output;
         }
+
+        #endregion
+        
     }
 }
 
