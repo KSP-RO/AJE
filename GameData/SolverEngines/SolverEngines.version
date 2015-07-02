@@ -1,0 +1,25 @@
+{
+  "NAME"     : "SolverEngines",
+  "DOWNLOAD" : "https://github.com/KSP-RO/SolverEngines/releases"
+  "URL"      : "https://raw.githubusercontent.com/KSP-RO/SolverEngines/master/GameData/SolverEngines/SolverEngines.version",
+  "GITHUB" : {
+    "USERNAME"   : "KSP-RO",
+    "REPOSITORY" : "SolverEngines"
+  },
+  "VERSION" : {
+    "MAJOR" : 2,
+    "MINOR" : 2,
+    "PATCH" : 1,
+    "BUILD" : 0
+  },
+  "KSP_VERSION_MIN" : {
+    "MAJOR" : 1,
+    "MINOR" : 0,
+    "PATCH" : 4
+  },
+  "KSP_VERSION_MAX" : {
+    "MAJOR" : 1,
+    "MINOR" : 0,
+    "PATCH" : 4
+  }
+}
