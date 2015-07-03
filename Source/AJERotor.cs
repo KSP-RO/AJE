@@ -122,19 +122,8 @@ namespace AJE
                 CreateEngine();
 
             // get stats
-            double pressure = 101.325d, temperature = 288.15d, density = 1.225d;
-            if (Planetarium.fetch != null)
-            {
-                CelestialBody home = Planetarium.fetch.Home;
-                if (home != null)
-                {
-                    pressure = home.GetPressure(0d);
-                    temperature = home.GetTemperature(0d);
-                    density = home.GetDensity(pressure, temperature);
-                }
-            }
             ambientTherm = new EngineThermodynamics();
-            ambientTherm.FromAmbientConditions(pressure, temperature, density);
+            ambientTherm.FromStandardConditions(true);
 
             currentThrottle = 1f;
             lastPropellantFraction = 1d;

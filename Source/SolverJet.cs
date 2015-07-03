@@ -15,6 +15,9 @@ namespace AJE
         //compressor pressure ratio, turbine temperature ratio, 
         private double BPR, FPR, CPR, TTR, inv_BPRp1;
 
+        //fan ratio constant = FPR/CPR
+        private double FRC;
+
         //engine design point; mach number, temperature 
         private double M_d, T_d;
 
@@ -22,22 +25,25 @@ namespace AJE
         private double prat2, prat3;
 
         //conditions at fan; pressure, temperature;
-        private double P2, T2;
+        private EngineThermodynamics th2 = new EngineThermodynamics();
 
         //Conditions at burner inlet / compressor exit
-        private double P3, T3, eta_c, inv_eta_c;
+        private double eta_c, inv_eta_c;
+        private EngineThermodynamics th3 = new EngineThermodynamics();
 
         //conditions at burner exit / turbine entrance; pressure, temperature, mass flow rate
-        private double P4, T4, eta_t;
+        private double eta_t;
+        private EngineThermodynamics th4 = new EngineThermodynamics();
 
         //conditions at ab inlet / turbine exit
-        private double P5, T5;
+        private EngineThermodynamics th5 = new EngineThermodynamics();
 
         //conditions at ab exhaust mixer;
-        private double P6, T6;
+        private EngineThermodynamics th6 = new EngineThermodynamics();
 
         //conditions at ab rear / nozzle entrance;
-        private double P7, T7, eta_n;
+        private double eta_n;
+        private EngineThermodynamics th7 = new EngineThermodynamics();
 
         //Throttles for burner and afterburner
         protected double mainThrottle, abThrottle;
@@ -45,14 +51,9 @@ namespace AJE
         protected float fxPower = 0f;
 
 
-        //gas properties: pre-burner in base, post-burner, post afterburner
-        private double gamma_t, gamma_ab;
-        private double R_t, R_ab;
-        private double Cp_t, Cp_ab;
-        private double Cv_t, Cv_ab;
 
-        //Air flow, fuel mass fraction for burner and afterburner
-        private double mdot, ff, ff_ab;
+        //Total mass flow through main nozzle (fuel + air)
+        private double mdot;
 
         //Fuel heat of burning and peak temperatures
         private double h_f, Tt4, Tt7;
@@ -91,6 +92,7 @@ namespace AJE
             spoolFactor = 1d - 0.05 * Math.Min(1d / Aref, 9d);
             BPR = bypassRatio; inv_BPRp1 = 1d / (1d + BPR);
             CPR = compressorRatio;
+            FRC = BPR / CPR;
             FPR = fanRatio;
             M_d = designMach;
             T_d = designTemperature;
@@ -102,18 +104,19 @@ namespace AJE
             Tt7 = max_TAB;
             exhaustMixer = useExhaustMixer;
 
-            gamma_c = CalculateGamma(T_d, 0);
-            Cp_c = CalculateCp(T_d, 0);
-            T1 = T_d * (1 + 0.5 * (gamma_c - 1) * M_d * M_d); //calculate TTR at design point first
-            T2 = T1 * Math.Pow(FPR, (gamma_c - 1) / gamma_c / eta_c);
-            T3 = T1 * Math.Pow(CPR, (gamma_c - 1) / gamma_c / eta_c);
-
-            ff = Cp_c * (Tt4 - T3) / (Cp_c * (Tt4 - T3) + h_f);//fuel fraction
-            gamma_t = CalculateGamma(Tt4, ff);
-            Cp_t = CalculateCp(Tt4, ff);
-
-
-            TTR = 1 - (BPR * Cp_c * (T2 - T1) + Cp_c * (T3 - T1)) / ((1 + ff) * Cp_t * Tt4);
+            //calculate TTR at design point first
+            th0.FromStandardConditions(false);
+            th0.T = T_d;
+            th1.FromChangeReferenceFrameMach(th0, M_d);
+            // Note that this work is negative
+            // Different mass flows between compressor, turbine, and bypass automatically taken care of by MassRatio
+            double turbineWork = 0d;
+            if (BPR > 0d)
+                turbineWork += th2.FromAdiabaticProcessWithPressureRatio(th1, FPR, efficiency: eta_c);
+            turbineWork += th3.FromAdiabaticProcessWithPressureRatio(th1, CPR, efficiency: eta_c);
+            th4.FromAddFuelToTemperature(th3, Tt4, h_f);
+            th5.FromAdiabaticProcessWithWork(th4, turbineWork, efficiency: eta_t);
+            TTR = th5.T / th4.T;
 
         }
 
@@ -166,116 +169,93 @@ namespace AJE
                 }
 
                 prat3 = CPR;
-                prat2 = FPR;
-                double k = FPR / CPR;
-                double p = Math.Pow(k, (gamma_c - 1) * inv_eta_c * inv_gamma_c);
+                double p = Math.Pow(FRC, (th1.Gamma - 1) * inv_eta_c / th1.Gamma);
                 for (int i = 0; i < 20; i++)    //use iteration to calculate CPR
                 {
-                    P2 = prat2 * P1;
-                    P3 = prat3 * P1;
-                    T2 = T1 * Math.Pow(prat2, (gamma_c - 1) * inv_eta_c * inv_gamma_c); //fan
-                    T3 = T1 * Math.Pow(prat3, (gamma_c - 1) * inv_eta_c * inv_gamma_c); //compressor
-
+                    th3.FromAdiabaticProcessWithPressureRatio(th1, prat3, efficiency: eta_c);
                     // FIXME use ffFraction here? Instead of just multiplying thrust by fuel fraction in the module?
                     // is so, set multiplyThrustByFuelFrac = false in the ModuleEnginesAJEJet.
-                    T4 = (Tt4 - T3) * mainThrottle + T3;    //burner
-                    P4 = P3;
-                    ff = Cp_c * (T4 - T3) / (Cp_c * (T4 - T3) + h_f);//fuel fraction
+                    th4.FromAddFuelToTemperature(th3, Tt4, h_f, throttle: mainThrottle);
+                    double turbineWork = th5.FromAdiabaticProcessWithTempRatio(th4, TTR, eta_t);
 
-                    Cp_t = CalculateCp(T4, ff);
-
-                    T5 = T4 * TTR;      //turbine
                     double x = prat3;
 
-                    prat3 = (1 + ff) * Cp_t * (T4 - T5) / T1 / Cp_c + 1 + BPR;
+                    prat3 = turbineWork / th1.T / th1.Cp + 1 + BPR;
                     prat3 /= 1 + BPR * p;
-                    prat3 = Math.Pow(prat3, eta_c * gamma_c * inv_gamma_cm1);
-                    prat2 = k * prat3;
+                    prat3 = Math.Pow(prat3, eta_c * th1.Gamma / (th1.Gamma - 1.0));
 
                     if (Math.Abs(x - prat3) < 0.01)
                         break;
                 }
 
-                gamma_t = CalculateGamma(T5, ff);//gas parameters
-                Cp_t = CalculateCp(T5, ff);
-                Cv_t = Cp_t / gamma_t;
-                R_t = Cv_t * (gamma_t - 1);
-
-                P5 = P4 * Math.Pow((1 - 1 / eta_t * (1 - TTR)), gamma_t / (gamma_t - 1));
+                if (BPR > 0d)
+                {
+                    prat2 = FRC * prat3;
+                    th2.FromAdiabaticProcessWithPressureRatio(th1, prat2, efficiency: eta_c);
+                    th2.MassRatio = BPR;
+                }
 
                 if (exhaustMixer && BPR > 0)//exhaust mixer
                 {
-                    double Cp6 = (Cp_c * BPR + Cp_t) * inv_BPRp1;//Cp of mixed flow -- kind of
-                    T6 = T5 * Cp_t / Cp6 * (1 + BPR * Cp_c * T2 / Cp_t / T5) * inv_BPRp1;
-                    P6 = (P5 + BPR * 0.98 * P2) * inv_BPRp1;
-                    ff /= (1 + ff + BPR);
-                    gamma_t = CalculateGamma(T6, ff);//gas parameters
-                    Cp_t = CalculateCp(T6, ff);
-                    Cv_t = Cp_t / gamma_t;
-                    R_t = Cv_t * (gamma_t - 1);
-
+                    th2.P *= 0.98;
+                    th6.FromMixStreams(th5, th2);
                 }
                 else
                 {
-                    T6 = T5;
-                    P6 = P5;
+                    th6.CopyFrom(th5);
                 }
-
 
                 if (Tt7 > 0)
                 {
-                    T7 = (Tt7 - T6) * abThrottle + T6;//afterburner  
+                    th7.FromAddFuelToTemperature(th6, Tt7, h_f, throttle: abThrottle);
                 }
                 else
                 {
-                    T7 = T6;
+                    th7.CopyFrom(th6);
                 }
 
-                P7 = P6;//rayleigh loss?
-
-                ff_ab = ff + Cp_t * (T7 - T6) / (Cp_t * (T7 - T6) + h_f);//fuel fraction
-                gamma_ab = CalculateGamma(T7, ff_ab);//gas parameters
-                Cp_ab = CalculateCp(T7, ff_ab);
-                Cv_ab = Cp_ab / gamma_ab;
-                R_ab = Cv_ab * (gamma_ab - 1);
-
                 //Nozzle code is from NASA
-                double P8 = P7;
-                double T8 = T7;
 
                 double p8, V8, A8;
-                double epr = P8 / P1;
-                double etr = T8 / T1;
+                double epr = th7.P / th1.P;
+                double etr = th7.T / th1.T;
 
+                // The factor of 0.75 implies that the mach number of air entering the compressor is about 0.5
+                // The factor can be calculated as 
+                // sqrt(gamma_c/gamma_ab * R_ab / R_c) * M * (1 + (gamma_c + 1)/2 * M^2)^(-(gamma_c + 1)/(2 * (gamma_c - 1)) / (gamma_ab + 1 / 2)^(-(gamma_ab + 1)/(2 * (gamma_ab - 1))
                 double area8max = .75 * Math.Sqrt(etr) / epr;//ratio of nozzle area to ref area
                 A8 = area8max * Aref;
                 if (exhaustMixer && BPR > 0)
                     A8 *= (1 + BPR);
-                double eair = P8 * Math.Sqrt(gamma_ab / R_ab / T8) *
-                    Math.Pow((.5 + .5 * gamma_ab), .5 * (1 + gamma_ab) / (1 - gamma_ab));//corrected mass flow per area
+                double eair = th7.P * Math.Sqrt(th7.Gamma / th7.R / th7.T) *
+                    Math.Pow((.5 + .5 * th7.Gamma), .5 * (1 + th7.Gamma) / (1 - th7.Gamma));//corrected mass flow per area
                 mdot = eair * A8;
-                double npr = P8 / p0;
-                double fac1 = (gamma_ab - 1.0) / gamma_ab;
-                double exitEnergy = R_c / fac1 * T8 * eta_n * (1.0 - Math.Pow(1.0 / npr, fac1));
-                V8 = Math.Sign(exitEnergy) * Math.Sqrt(Math.Abs(2.0 * R_c / fac1 * T8 * eta_n * (1.0 - Math.Pow(1.0 / npr, fac1))));     //exit velocity - may be negative under certain conditions
-                p8 = (npr <= 1.893) ? p0 : .52828 * P8;
-                thrust = V8 * mdot + (p8 - p0) * A8;
+                double npr = th7.P / th0.P;
+                double fac1 = (th7.Gamma - 1.0) / th7.Gamma;
+                double exitEnergy = th7.R / fac1 * th7.T * eta_n * (1.0 - Math.Pow(1.0 / npr, fac1));
+                V8 = Math.Sign(exitEnergy) * Math.Sqrt(Math.Abs(2.0 * exitEnergy));     //exit velocity - may be negative under certain conditions
+                Anozzle = mdot / th7.P * th7.R * th7.T / V8 * Math.Pow(0.5 * V8 * V8 / th7.Cp / th7.T + 1d, 0.5d * (th7.Gamma + 1d) / (th7.Gamma - 1d));
+                double chokeRatio = Math.Pow(0.5d * (th7.Gamma + 1d), th7.Gamma / (th7.Gamma - 1d));
+                p8 = (npr <= chokeRatio) ? th0.P : th7.P / chokeRatio;
+                thrust = V8 * mdot + (p8 - th0.P) * Anozzle;
+                thrust -= mdot * (1.0 - th7.FF) * (vel);//ram drag
 
                 if (BPR > 0 && FPR > 1 && exhaustMixer == false)
                 {
-                    fac1 = (gamma_c - 1) * inv_gamma_c; //fan thrust from NASA
-                    double snpr = P2 / p0;
-                    double fExitEnergy = R_c / fac1 * T2 * eta_n * (1.0 - Math.Pow(1.0 / snpr, fac1));
+                    fac1 = (th2.Gamma - 1) / th2.Gamma; //fan thrust from NASA
+                    double snpr = th2.P / th0.P;
+                    double fExitEnergy = th2.R / fac1 * th2.T * eta_n * (1.0 - Math.Pow(1.0 / snpr, fac1));
                     double ues = Math.Sign(fExitEnergy) * Math.Sqrt(Math.Abs(2.0 * fExitEnergy));
-                    double pfexit = (snpr <= 1.893) ? p0 : .52828 * P2; //exit pressure of fan 
-                    thrust += BPR * ues * mdot / (1 + ff_ab) + (pfexit - p0) * BPR * Aref;
+                    double bypassAirFlow = mdot / th7.MassRatio * th2.MassRatio; // th2.MassRatio will be equal to BPR at this point
+                    double ANozzleBypass = bypassAirFlow / th2.P * th2.R * th2.T / ues * Math.Pow(0.5 * ues * ues / th2.Cp / th2.T + 1d, 0.5d * (th2.Gamma + 1d) / (th2.Gamma - 1d));
+                    chokeRatio = Math.Pow(0.5d * (th2.Gamma + 1d), th2.Gamma / (th2.Gamma - 1d));
+                    double pfexit = (snpr <= chokeRatio) ? th0.P : th2.P / chokeRatio; //exit pressure of fan
+                    thrust += bypassAirFlow * ues + (pfexit - p0) * ANozzleBypass;
+                    thrust -= bypassAirFlow * vel;
                 }
 
-
-                thrust -= mdot / (1 + ff_ab) * (1 + (exhaustMixer ? 0 : BPR)) * (vel);//ram drag
-
                 thrust *= flowMult * ispMult;
-                fuelFlow = mdot * ff_ab * flowMult;
+                fuelFlow = mdot * th7.FF * flowMult;
                 Isp = thrust / (fuelFlow * 9.80665);
                 thrust *= airRatio; // FIXME: should this get applied to fuel flow and Isp too?
 
@@ -283,28 +263,28 @@ namespace AJE
                   debugstring = "";
                   debugstring += "TTR:\t" + TTR.ToString("F3") + "\r\n";
                   debugstring += "CPR:\t" + prat3.ToString("F3") + "\r\n"; ;
-                  debugstring += "p0: " + p0.ToString("F2") + "\tt0: " + t0.ToString("F2") + "\r\n";
-                  debugstring += "P1: " + P1.ToString("F2") + "\tT1: " + T1.ToString("F2") + "\r\n";
-                  debugstring += "P2: " + P2.ToString("F2") + "\tT2: " + T2.ToString("F2") + "\r\n";
-                  debugstring += "P3: " + P3.ToString("F2") + "\tT3: " + T3.ToString("F2") + "\r\n";
-                  debugstring += "P4: " + P4.ToString("F2") + "\tT4: " + T4.ToString("F2") + "\r\n";
-                  debugstring += "P5: " + P5.ToString("F2") + "\tT5: " + T5.ToString("F2") + "\r\n";
-                  debugstring += "P6: " + P6.ToString("F2") + "\tT6: " + T6.ToString("F2") + "\r\n";
-                  debugstring += "P7: " + P7.ToString("F2") + "\tT7: " + T7.ToString("F2") + "\r\n";
+                  debugstring += "p0: " + th0.P.ToString("F2") + "\tt0: " + th0.T.ToString("F2") + "\r\n";
+                  debugstring += "P1: " + th1.P.ToString("F2") + "\tT1: " + th1.T.ToString("F2") + "\r\n";
+                  debugstring += "P2: " + th2.P.ToString("F2") + "\tT2: " + th2.T.ToString("F2") + "\r\n";
+                  debugstring += "P3: " + th3.P.ToString("F2") + "\tT3: " + th3.T.ToString("F2") + "\r\n";
+                  debugstring += "P4: " + th4.P.ToString("F2") + "\tT4: " + th4.T.ToString("F2") + "\r\n";
+                  debugstring += "P5: " + th5.P.ToString("F2") + "\tT5: " + th5.T.ToString("F2") + "\r\n";
+                  debugstring += "P6: " + th6.P.ToString("F2") + "\tT6: " + th6.T.ToString("F2") + "\r\n";
+                  debugstring += "P7: " + th7.P.ToString("F2") + "\tT7: " + th7.ToString("F2") + "\r\n";
                   debugstring += "EPR: " + epr.ToString("F2") + "\tETR: " + etr.ToString("F2") + "\r\n";
 
-                  debugstring += "FF: " + ff.ToString("P") + "\t";
-                  debugstring += "FF_AB: " + ff_ab.ToString("P") + "\r\n";
+                  debugstring += "FF: " + th5.FF.ToString("P") + "\t";
+                  debugstring += "FF_AB: " + th7.FF.ToString("P") + "\r\n";
                   debugstring += "V8: " + V8.ToString("F2") + "\tA8: " + A8.ToString("F2") + "\r\n";
                   debugstring += "Thrust: " + (thrust / 1000).ToString("F1") + "\tmdot: " + mdot.ToString("F2") + "\r\n";
-                  debugstring += "NetThrust: " + (thrust / 1000).ToString("F1") + "\tSFC: " + (3600 / Isp).ToString("F3") + "\r\n";
+                  debugstring += "Isp: " + Isp.ToString("F0") + "\tSFC: " + (3600 / Isp).ToString("F3") + "\r\n";
                   Debug.Log(debugstring);*/
             }
             else
             {
                 double shutdownScalar = Math.Pow(spoolFactor, TimeWarp.fixedDeltaTime);
 
-                T3 = Math.Max(t0, T3 * shutdownScalar - 4d);
+                th3.T = Math.Max(t0, th3.T * shutdownScalar - 4d);
 
                 mainThrottle = Math.Max(0d, mainThrottle * shutdownScalar - 0.05d);
                 if (Tt7 > 0)
@@ -331,7 +311,7 @@ namespace AJE
             engineModule.Area = (float)Aref;
         }
 
-        public override double GetEngineTemp() { return T3; }
+        public override double GetEngineTemp() { return th3.T; }
         public override double GetArea() { return Aref * (1d + BPR); }
         public override double GetEmissive() { return fxPower; }
         public override float GetFXPower() { return fxPower; }
