@@ -68,6 +68,9 @@ namespace AJE
         // engine status
         protected bool combusting = true;
 
+        // Engine fit data
+        protected double dryThrust, drySFC, wetThrust;
+
         //---------------------------------------------------------
         //Initialization Functions
 
@@ -118,11 +121,6 @@ namespace AJE
             th5.FromAdiabaticProcessWithWork(th4, turbineWork, efficiency: eta_t);
             TTR = th5.T / th4.T;
 
-        }
-
-        public void UpdateArea(double newArea)
-        {
-            Aref = newArea;
         }
 
         public override void CalculatePerformance(double airRatio, double commandedThrottle, double flowMult, double ispMult)
@@ -297,18 +295,79 @@ namespace AJE
                 fxPower = (float)(mainThrottle * 0.25d + abThrottle * 0.75d);
         }
 
+        public void PullFitParams(ModuleEnginesAJEJet engineModule)
+        {
+            Aref = engineModule.Area;
+            Tt7 = engineModule.TAB;
+        }
+
         public void FitEngine(ModuleEnginesAJEJet engineModule)
         {
             float TPR = AJEInlet.OverallStaticTPR(engineModule.defaultTPR);
             SetEngineState(true, 1d);
-            SetStaticConditions(overallTPR : TPR);
-            double throttle = Tt7 > 0d ? 2d / 3d : 1d;
-            CalculatePerformance(1d, throttle, 1d, 1d);
+            SetStaticConditions(usePlanetarium: false, overallTPR : TPR);
 
-            System.Diagnostics.Debug.Assert(engineModule.Area == Aref);
-            Aref *= engineModule.dryThrust * 1000d / thrust;
+            dryThrust = engineModule.dryThrust * 1000d;
+            if (dryThrust > 0f)
+            {
+                double throttle = Tt7 > 0d ? 2d / 3d : 1d;
+                CalculatePerformance(1d, throttle, 1d, 1d);
 
-            engineModule.Area = (float)Aref;
+                System.Diagnostics.Debug.Assert(engineModule.Area == Aref);
+                Aref *= dryThrust / thrust;
+
+                engineModule.Area = (float)Aref;
+            }
+            wetThrust = engineModule.wetThrust * 1000d;
+            if (wetThrust > 0d)
+            {
+                bool doFit = true;
+
+                if (Tt7 <= 0d)
+                    Tt7 = 2500d;
+                else
+                {
+                    CalculatePerformance(1d, 1d, 1d, 1d);
+                    if (Math.Abs(thrust/wetThrust - 1d) <= 0.0001d)
+                    {
+                        // TAB already correct, no need to fit
+                        doFit = false;
+                    }
+                }
+
+                // Check bounds
+                if (doFit)
+                {
+                    CalculatePerformance(1d, 2d / 3d, 1d, 1d);
+
+                    if (thrust >= wetThrust)
+                    {
+                        Debug.LogWarning("Cannot fit wet thrust on engine " + engineModule.part.name + " because dry thrust is already greater than specified value.");
+                        doFit = false;
+                    }
+
+                    Tt7 = 4000d;
+                    CalculatePerformance(1d, 1d, 1d, 1d);
+                    if (thrust <= wetThrust)
+                    {
+                        Debug.LogWarning("Cannot fit wet thrust on engine " + engineModule.part.name + " because it would require an afterburner temperature of more than 4000 K.");
+                        doFit = false;
+                    }
+                }
+
+                if (doFit)
+                {
+                    Tt7 = SolverMathUtil.BrentsMethod(WetThrustFittingFunction, th5.T, 4000d, maxIter: 1000);
+                    engineModule.TAB = (float)Tt7;
+                }
+            }
+        }
+
+        private double WetThrustFittingFunction(double TAB)
+        {
+            Tt7 = TAB;
+            CalculatePerformance(1d, 1d, 1d, 1d);
+            return thrust - wetThrust;
         }
 
         public override double GetEngineTemp() { return th3.T; }

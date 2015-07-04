@@ -46,7 +46,7 @@ namespace AJE
         [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float TIT = 1200;
-        [EngineParameter]
+        [EngineFitResult]
         [KSPField(isPersistant = false, guiActive = false)]
         public float TAB = 0;
         [EngineParameter]
@@ -62,6 +62,9 @@ namespace AJE
         [EngineFitData]
         [KSPField(isPersistant = false, guiActive = false)]
         public float dryThrust = 0f;
+        [EngineFitData]
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float wetThrust = 0f;
 
         [KSPField(isPersistant = false, guiActive = true, guiName = "Compression Ratio", guiFormat = "F1")]
         public float prat3 = 0f;
@@ -132,12 +135,14 @@ namespace AJE
 
         public override bool CanFitEngine()
         {
-            return (dryThrust > 0f) & (CPR > 1f);
+            if (CPR == 1f)
+                return false;
+            return (dryThrust > 0f) | (wetThrust > 0f);
         }
 
         public override void PushFitParamsToSolver()
         {
-            (engineSolver as SolverJet).UpdateArea(Area);
+            (engineSolver as SolverJet).PullFitParams(this);
         }
 
         public override void DoEngineFit()
