@@ -77,6 +77,7 @@ namespace AJE
 
                 fuelFlow = BSFC * power * flowMult;
                 Isp = thrust / (fuelFlow * 9.80665d);
+                SFC = 3600d / Isp;
             }
         }
 

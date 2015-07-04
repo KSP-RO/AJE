@@ -255,6 +255,7 @@ namespace AJE
                 thrust *= flowMult * ispMult;
                 fuelFlow = mdot * th7.FF * flowMult;
                 Isp = thrust / (fuelFlow * 9.80665);
+                SFC = 3600d / Isp;
                 thrust *= airRatio; // FIXME: should this get applied to fuel flow and Isp too?
 
                 /*  
@@ -307,11 +308,23 @@ namespace AJE
             SetEngineState(true, 1d);
             SetStaticConditions(usePlanetarium: false, overallTPR : TPR);
 
-            dryThrust = engineModule.dryThrust * 1000d;
-            if (dryThrust > 0f)
+            double dryThrottle = Tt7 > 0d ? 2d / 3d : 1d;
+
+            drySFC = engineModule.drySFC;
+            if (drySFC > 0d)
             {
-                double throttle = Tt7 > 0d ? 2d / 3d : 1d;
-                CalculatePerformance(1d, throttle, 1d, 1d);
+                CalculatePerformance(1d, dryThrottle, 1d, 1d);
+                if (Math.Abs(SFC / drySFC - 1d) > 0.0001d)
+                {
+                    h_f = SolverMathUtil.BrentsMethod(DrySFCFittingFunction, 10e6, 200e6, maxIter: 1000);
+                    engineModule.FHV = (float)h_f;
+                }
+            }
+
+            dryThrust = engineModule.dryThrust * 1000d;
+            if (dryThrust > 0d)
+            {
+                CalculatePerformance(1d, dryThrottle, 1d, 1d);
 
                 System.Diagnostics.Debug.Assert(engineModule.Area == Aref);
                 Aref *= dryThrust / thrust;
@@ -360,7 +373,18 @@ namespace AJE
                     Tt7 = SolverMathUtil.BrentsMethod(WetThrustFittingFunction, th5.T, 4000d, maxIter: 1000);
                     engineModule.TAB = (float)Tt7;
                 }
+                else
+                {
+                    Tt7 = engineModule.TAB;
+                }
             }
+        }
+
+        private double DrySFCFittingFunction(double heatOfFuel)
+        {
+            h_f = heatOfFuel;
+            CalculatePerformance(1d, Tt7 > 0d ? 2d / 3d : 1d, 1d, 1d);
+            return SFC - drySFC;
         }
 
         private double WetThrustFittingFunction(double TAB)

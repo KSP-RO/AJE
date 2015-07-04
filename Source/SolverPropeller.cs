@@ -206,7 +206,11 @@ namespace AJE
                 thrust += propThrust;
             }
             if (fuelFlow > 0d)
+            {
                 Isp = thrust / (fuelFlow * 9.80665d);
+                SFC = 3600d / Isp;
+            }
+            
 
         }
         public override double GetEngineTemp() { return temperature; }
