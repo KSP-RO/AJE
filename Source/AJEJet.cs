@@ -40,7 +40,7 @@ namespace AJE
         [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float eta_n = 0.9f;
-        [EngineParameter]
+        [EngineFitResult]
         [KSPField(isPersistant = false, guiActive = false)]
         public float FHV = 46.8E6f;
         [EngineParameter]

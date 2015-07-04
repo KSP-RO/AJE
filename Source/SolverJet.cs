@@ -107,20 +107,29 @@ namespace AJE
             Tt7 = max_TAB;
             exhaustMixer = useExhaustMixer;
 
+            CalculateTTR();
+        }
+
+        protected void CalculateTTR()
+        {
             //calculate TTR at design point first
-            th0.FromStandardConditions(false);
-            th0.T = T_d;
-            th1.FromChangeReferenceFrameMach(th0, M_d);
+
+            // Don't overwrite th0 and th1
+            EngineThermodynamics ambientTherm = new EngineThermodynamics();
+            EngineThermodynamics inletTherm = new EngineThermodynamics();
+
+            ambientTherm.FromStandardConditions(false);
+            ambientTherm.T = T_d;
+            inletTherm.FromChangeReferenceFrameMach(ambientTherm, M_d);
             // Note that this work is negative
             // Different mass flows between compressor, turbine, and bypass automatically taken care of by MassRatio
             double turbineWork = 0d;
             if (BPR > 0d)
-                turbineWork += th2.FromAdiabaticProcessWithPressureRatio(th1, FPR, efficiency: eta_c);
-            turbineWork += th3.FromAdiabaticProcessWithPressureRatio(th1, CPR, efficiency: eta_c);
+                turbineWork += th2.FromAdiabaticProcessWithPressureRatio(inletTherm, FPR, efficiency: eta_c);
+            turbineWork += th3.FromAdiabaticProcessWithPressureRatio(inletTherm, CPR, efficiency: eta_c);
             th4.FromAddFuelToTemperature(th3, Tt4, h_f);
             th5.FromAdiabaticProcessWithWork(th4, turbineWork, efficiency: eta_t);
             TTR = th5.T / th4.T;
-
         }
 
         public override void CalculatePerformance(double airRatio, double commandedThrottle, double flowMult, double ispMult)
@@ -298,8 +307,10 @@ namespace AJE
 
         public void PullFitParams(ModuleEnginesAJEJet engineModule)
         {
+            h_f = engineModule.FHV;
             Aref = engineModule.Area;
             Tt7 = engineModule.TAB;
+            CalculateTTR();
         }
 
         public void FitEngine(ModuleEnginesAJEJet engineModule)
@@ -317,6 +328,7 @@ namespace AJE
                 if (Math.Abs(SFC / drySFC - 1d) > 0.0001d)
                 {
                     h_f = SolverMathUtil.BrentsMethod(DrySFCFittingFunction, 10e6, 200e6, maxIter: 1000);
+                    CalculateTTR();
                     engineModule.FHV = (float)h_f;
                 }
             }
@@ -383,6 +395,7 @@ namespace AJE
         private double DrySFCFittingFunction(double heatOfFuel)
         {
             h_f = heatOfFuel;
+            CalculateTTR();
             CalculatePerformance(1d, Tt7 > 0d ? 2d / 3d : 1d, 1d, 1d);
             return SFC - drySFC;
         }
