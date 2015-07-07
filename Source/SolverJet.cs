@@ -52,8 +52,8 @@ namespace AJE
 
 
 
-        //Total mass flow through main nozzle (fuel + air)
-        private double mdot;
+        //Total mass flow through main nozzle (fuel + air), air flow through core
+        private double mdot, coreAirflow;
 
         //Fuel heat of burning and peak temperatures
         private double h_f, Tt4, Tt7;
@@ -64,6 +64,9 @@ namespace AJE
 
         //use exhaust mixer or not
         private bool exhaustMixer;
+
+        //Whether the nozzle is adjustable to accelerate exhaust to supersonic speed
+        private bool adjustableNozzle;
 
         // engine status
         protected bool combusting = true;
@@ -87,7 +90,8 @@ namespace AJE
             double heatOfFuel,
             double max_TIT,
             double max_TAB,
-            bool useExhaustMixer
+            bool useExhaustMixer,
+            bool supersonicNozzle
             )
         {
 
@@ -106,6 +110,7 @@ namespace AJE
             Tt4 = max_TIT;
             Tt7 = max_TAB;
             exhaustMixer = useExhaustMixer;
+            adjustableNozzle = supersonicNozzle;
 
             CalculateTTR();
         }
@@ -223,39 +228,63 @@ namespace AJE
 
                 //Nozzle code is from NASA
 
-                double p8, V8, A8;
+                double p8, V8;
+                //double A8;
                 double epr = th7.P / th1.P;
                 double etr = th7.T / th1.T;
 
                 // The factor of 0.75 implies that the mach number of air entering the compressor is about 0.5
                 // The factor can be calculated as 
-                // sqrt(gamma_c/gamma_ab * R_ab / R_c) * M * (1 + (gamma_c + 1)/2 * M^2)^(-(gamma_c + 1)/(2 * (gamma_c - 1)) / (gamma_ab + 1 / 2)^(-(gamma_ab + 1)/(2 * (gamma_ab - 1))
-                double area8max = .75 * Math.Sqrt(etr) / epr;//ratio of nozzle area to ref area
-                A8 = area8max * Aref;
-                if (exhaustMixer && BPR > 0)
-                    A8 *= (1 + BPR);
-                double eair = th7.P * Math.Sqrt(th7.Gamma / th7.R / th7.T) *
-                    Math.Pow((.5 + .5 * th7.Gamma), .5 * (1 + th7.Gamma) / (1 - th7.Gamma));//corrected mass flow per area
-                mdot = eair * A8;
-                double npr = th7.P / th0.P;
-                double fac1 = (th7.Gamma - 1.0) / th7.Gamma;
-                double exitEnergy = th7.R / fac1 * th7.T * eta_n * (1.0 - Math.Pow(1.0 / npr, fac1));
-                V8 = Math.Sign(exitEnergy) * Math.Sqrt(Math.Abs(2.0 * exitEnergy));     //exit velocity - may be negative under certain conditions
-                Anozzle = mdot / th7.P * th7.R * th7.T / V8 * Math.Pow(0.5 * V8 * V8 / th7.Cp / th7.T + 1d, 0.5d * (th7.Gamma + 1d) / (th7.Gamma - 1d));
-                double chokeRatio = Math.Pow(0.5d * (th7.Gamma + 1d), th7.Gamma / (th7.Gamma - 1d));
-                p8 = (npr <= chokeRatio) ? th0.P : th7.P / chokeRatio;
-                thrust = V8 * mdot + (p8 - th0.P) * Anozzle;
-                thrust -= mdot * (1.0 - th7.FF) * (vel);//ram drag
+                // 1 / (1 - ff_ab) * sqrt(gamma_c/gamma_ab * R_ab / R_c) * M * (1 + (gamma_c + 1)/2 * M^2)^(-(gamma_c + 1)/(2 * (gamma_c - 1)) / ((gamma_ab + 1) / 2)^(-(gamma_ab + 1)/(2 * (gamma_ab - 1))
+                //
+                //A8 = .75 * Aref * th7.MassRatio * Math.Sqrt(th1.Gamma / th7.Gamma * th7.R / th1.R) * Math.Sqrt(etr) / epr;//ratio of nozzle area to ref area
+                //double area8max = .75 * Math.Sqrt(etr) / epr;//ratio of nozzle area to ref area
+                //A8 = area8max * Aref;
+                //if (exhaustMixer && BPR > 0)
+                //    A8 *= (1 + BPR);
+                //double eair = th7.P * Math.Sqrt(th7.Gamma / th7.R / th7.T) *
+                //    Math.Pow((0.5d + 0.5d * th7.Gamma), 0.5d * (1d + th7.Gamma) / (1d - th7.Gamma));//corrected mass flow per area
+                //mdot = eair * A8;
 
-                if (BPR > 0 && FPR > 1 && exhaustMixer == false)
+                // New way - make M=0.5 explicit
+                // Later will be adjusted by prat3
+                double compressorEntryMach = 0.5;
+                coreAirflow = Aref * th1.P * Math.Sqrt(th1.Gamma / th1.R / th1.T) * compressorEntryMach *
+                    Math.Pow((0.5 * (th1.Gamma - 1d)* compressorEntryMach * compressorEntryMach + 1d), 0.5d * (1d + th1.Gamma) / (1d - th1.Gamma));
+                mdot = th7.MassRatio * coreAirflow;
+
+                double npr = th7.P / th0.P;
+                double fac1 = (th7.Gamma - 1d) / th7.Gamma;
+                double exitEnergy = th7.R / fac1 * th7.T * eta_n * (1.0 - Math.Pow(1d / npr, fac1));
+                V8 = Math.Sqrt(Math.Abs(2d * exitEnergy));     //exit velocity - may be negative under certain conditions
+                if (!adjustableNozzle)
                 {
-                    fac1 = (th2.Gamma - 1) / th2.Gamma; //fan thrust from NASA
+                    // Clamp exit velocity to speed of sound
+                    V8 = Math.Min(V8, th7.Vs);
+                    double chokeRatio = Math.Pow(0.5d * (th7.Gamma + 1d), th7.Gamma / (th7.Gamma - 1d));
+                    p8 = (npr <= chokeRatio) ? th0.P : th7.P / chokeRatio;
+                }
+                else
+                {
+                    p8 = th0.P;
+                }
+                V8 *= Math.Sign(exitEnergy);
+                Anozzle = mdot / th7.P * th7.R * th7.T / V8 * Math.Pow(0.5 * V8 * V8 / th7.Cp / th7.T + 1d, 0.5d * (th7.Gamma + 1d) / (th7.Gamma - 1d));
+                thrust = V8 * mdot + (p8 - th0.P) * Anozzle;
+                thrust -= mdot * (1d - th7.FF) * (vel);//ram drag
+
+                if (BPR > 0d && FPR > 1d && exhaustMixer == false)
+                {
+                    fac1 = (th2.Gamma - 1d) / th2.Gamma; //fan thrust from NASA
                     double snpr = th2.P / th0.P;
-                    double fExitEnergy = th2.R / fac1 * th2.T * eta_n * (1.0 - Math.Pow(1.0 / snpr, fac1));
-                    double ues = Math.Sign(fExitEnergy) * Math.Sqrt(Math.Abs(2.0 * fExitEnergy));
+                    double fExitEnergy = th2.R / fac1 * th2.T * eta_n * (1d - Math.Pow(1d / snpr, fac1));
+                    double ues = Math.Sqrt(Math.Abs(2d * fExitEnergy));
+                    // Clamp exit velocity to speed of sound - bypass always uses convergent nozzle
+                    ues = Math.Min(ues, th2.Vs);
+                    ues *= Math.Sign(fExitEnergy);
                     double bypassAirFlow = mdot / th7.MassRatio * th2.MassRatio; // th2.MassRatio will be equal to BPR at this point
                     double ANozzleBypass = bypassAirFlow / th2.P * th2.R * th2.T / ues * Math.Pow(0.5 * ues * ues / th2.Cp / th2.T + 1d, 0.5d * (th2.Gamma + 1d) / (th2.Gamma - 1d));
-                    chokeRatio = Math.Pow(0.5d * (th2.Gamma + 1d), th2.Gamma / (th2.Gamma - 1d));
+                    double chokeRatio = Math.Pow(0.5d * (th2.Gamma + 1d), th2.Gamma / (th2.Gamma - 1d));
                     double pfexit = (snpr <= chokeRatio) ? th0.P : th2.P / chokeRatio; //exit pressure of fan
                     thrust += bypassAirFlow * ues + (pfexit - p0) * ANozzleBypass;
                     thrust -= bypassAirFlow * vel;
@@ -305,11 +334,12 @@ namespace AJE
                 fxPower = (float)(mainThrottle * 0.25d + abThrottle * 0.75d);
         }
 
-        public void PullFitParams(ModuleEnginesAJEJet engineModule)
+        public void SetFitParams(double area, double fhv, double TAB)
         {
-            h_f = engineModule.FHV;
-            Aref = engineModule.Area;
-            Tt7 = engineModule.TAB;
+            h_f = fhv;
+            Aref = area;
+            Tt7 = TAB;
+            Debug.Log("Got FHV = " + fhv.ToString() + ", Area = " + area.ToString() + ", TAB = " + TAB.ToString());
             CalculateTTR();
         }
 

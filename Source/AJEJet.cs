@@ -54,10 +54,15 @@ namespace AJE
         public bool exhaustMixer = false;
         [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
+        public bool adjustableNozzle = true;
+        [EngineParameter]
+        [KSPField(isPersistant = false, guiActive = false)]
         public float defaultTPR = 1f;
 
         [KSPField(isPersistant = false, guiActive = false)]
         public float maxT3 = 9999;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public bool intakeMatchArea = false;
 
         [EngineFitData]
         [KSPField(isPersistant = false, guiActive = false)]
@@ -91,13 +96,16 @@ namespace AJE
                 FHV,
                 TIT,
                 TAB,
-                exhaustMixer
+                exhaustMixer,
+                adjustableNozzle
                 );
             useAtmCurve = atmChangeFlow = useVelCurve = false;
             maxEngineTemp = maxT3;
 
             if (CPR == 1f)
                 Fields["prat3"].guiActive = false;
+
+            PushAreaToInlet();
         }
 
         public override void CreateEngineIfNecessary()
@@ -136,21 +144,56 @@ namespace AJE
 
         #region Engine Fitting
 
-        public override bool CanFitEngine()
+        public override bool ShouldFitParameter(EngineParameterInfo info)
         {
+            if (!base.ShouldFitParameter(info))
+                return false;
+
             if (CPR == 1f)
                 return false;
-            return (drySFC > 0f) | (dryThrust > 0f) | (wetThrust > 0f);
+
+            if (info.Field.Name == "Area")
+            {
+                if (dryThrust > 0f)
+                    return true;
+            }
+            else if (info.Field.Name == "FHV")
+            {
+                if (drySFC > 0f)
+                    return true;
+            }
+            else if (info.Field.Name == "TAB")
+            {
+                if (wetThrust > 0f)
+                    return true;
+            }
+
+            return false;
         }
 
         public override void PushFitParamsToSolver()
         {
-            (engineSolver as SolverJet).PullFitParams(this);
+            (engineSolver as SolverJet).SetFitParams(Area, FHV, TAB);
+            PushAreaToInlet();
         }
 
         public override void DoEngineFit()
         {
             (engineSolver as SolverJet).FitEngine(this);
+            PushAreaToInlet();
+        }
+
+        protected void PushAreaToInlet()
+        {
+            if (intakeMatchArea)
+            {
+                AJEInlet intake = part.FindModuleImplementing<AJEInlet>();
+                if (intake != null)
+                    if (engineSolver != null)
+                        intake.Area = (float)engineSolver.GetArea();
+                    else
+                        intake.Area = Area * (1f + BPR);
+            }
         }
 
         #endregion
