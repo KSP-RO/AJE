@@ -438,7 +438,9 @@ namespace AJE
         }
 
         public override double GetEngineTemp() { return th3.T; }
-        public override double GetArea() { return Aref * (1d + BPR); }
+        // 0.75 is a fudge factor to match engine and intake area until intake spilling, shock capture, etc can actually be modeled
+        // Real engines' intake requirements vary with flight condition, many require suck in doors at low speeds but no way to model that yet
+        public override double GetArea() { return Aref * (1d + BPR) * 0.75; }
         public override double GetEmissive() { return fxPower; }
         public override float GetFXPower() { return fxPower; }
         public override float GetFXRunning() { return fxPower; }

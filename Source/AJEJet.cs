@@ -192,7 +192,7 @@ namespace AJE
                     if (engineSolver != null)
                         intake.Area = (float)engineSolver.GetArea();
                     else
-                        intake.Area = Area * (1f + BPR);
+                        intake.Area = Area * (1f + BPR) * 0.75f;
             }
         }
 
