@@ -144,19 +144,19 @@ namespace AJE
             double deltaTime = TimeWarp.fixedDeltaTime;
             if (engine == null)
             {
-                if (ffFraction > 0d)
-                {
-                    combusting = true;
-                    fxPower = (float)throttle;
-                    shaftPower = maxPower * throttle * ispMult * flowMult;
-                    fuelFlow = shaftPower * BSFC * flowMult;
-                    statusString = "Nominal";
-                }
-                else
+                combusting = running;
+                statusString = "Nominal";
+                if (ffFraction <= 0d)
                 {
                     combusting = false;
                     statusString = "No fuel";
                     fxPower = 0f;
+                }
+                if (combusting)
+                {
+                    fxPower = (float)throttle;
+                    shaftPower = maxPower * throttle * ispMult * flowMult;
+                    fuelFlow = shaftPower * BSFC * flowMult;
                 }
                 if (shaftPower > 0d)
                 {
