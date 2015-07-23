@@ -27,6 +27,14 @@ SolverEngines includes a GUI to display useful information about engines in flig
 See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
+v1.8
+* Fix for GUI issues in 1.7.
+* To avoid the "can't restart engine once propellant is provided again" issue, shutdown and then activate your engine. That will clear its memory of flameouts.
+
+v1.7
+* Remove duplicate GUI entries.
+* Avoid some NREs.
+
 v1.6
 * Finally fix the "can't start when shielded" thing. Activate/toggle was fixed but staging wasn't.
 * Improve fitting code.
