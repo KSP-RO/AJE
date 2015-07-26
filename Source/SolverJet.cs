@@ -288,7 +288,6 @@ namespace AJE
                 fuelFlow = mdot * th7.FF * flowMult;
                 Isp = thrust / (fuelFlow * 9.80665);
                 SFC = 3600d / Isp;
-                thrust *= airRatio; // FIXME: should this get applied to fuel flow and Isp too?
 
                 /*  
                   debugstring = "";
