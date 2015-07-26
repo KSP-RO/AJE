@@ -63,6 +63,8 @@ namespace AJE
         public float maxT3 = 9999;
         [KSPField(isPersistant = false, guiActive = false)]
         public bool intakeMatchArea = false;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float areaFudgeFactor = 0.75f;
 
         [EngineFitData]
         [KSPField(isPersistant = false, guiActive = false)]
@@ -142,6 +144,11 @@ namespace AJE
             prat3 = (float)(engineSolver as SolverJet).Prat3;
         }
 
+        public override float RequiredIntakeArea()
+        {
+            return base.RequiredIntakeArea() * areaFudgeFactor;
+        }
+
         #region Engine Fitting
 
         public override bool ShouldFitParameter(EngineParameterInfo info)
@@ -189,10 +196,7 @@ namespace AJE
             {
                 AJEInlet intake = part.FindModuleImplementing<AJEInlet>();
                 if (intake != null)
-                    if (engineSolver != null)
-                        intake.Area = (float)engineSolver.GetArea();
-                    else
-                        intake.Area = Area * (1f + BPR) * 0.75f;
+                    intake.Area = RequiredIntakeArea();
             }
         }
 
@@ -255,7 +259,7 @@ namespace AJE
 
             if (!primaryField && CPR != 1f)
             {
-                output += "\n<b>Required Area:</b> " + engineSolver.GetArea().ToString("F3") + " m^2";
+                output += "\n<b>Required Area:</b> " + RequiredIntakeArea().ToString("F3") + " m^2";
                 if (BPR > 0f)
                     output += "\n<b>Bypass Ratio:</b> " + BPR.ToString("F2");
                 output += "\n<b>Compression Ratio (static):</b> " + (engineSolver as SolverJet).Prat3.ToString("F1") + "\n";
