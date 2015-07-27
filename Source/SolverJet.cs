@@ -99,8 +99,8 @@ namespace AJE
             spoolFactor = 1d - 0.05 * Math.Min(1d / Aref, 9d);
             BPR = bypassRatio; inv_BPRp1 = 1d / (1d + BPR);
             CPR = compressorRatio;
-            FRC = BPR / CPR;
             FPR = fanRatio;
+            FRC = FPR / CPR;
             M_d = designMach;
             T_d = designTemperature;
             eta_c = compressorEta; inv_eta_c = 1d / eta_c;
