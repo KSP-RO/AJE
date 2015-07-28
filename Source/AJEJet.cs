@@ -186,7 +186,13 @@ namespace AJE
 
         public override void DoEngineFit()
         {
-            (engineSolver as SolverJet).FitEngine(this);
+            SolverJet jetEngine = engineSolver as SolverJet;
+            jetEngine.FitEngine(dryThrust * 1000d, drySFC, wetThrust * 1000d, defaultTPR : defaultTPR);
+
+            Area = (float)jetEngine.GetAref();
+            FHV = (float)jetEngine.GetFHV();
+            TAB = (float)jetEngine.GetTAB();
+
             PushAreaToInlet();
         }
 

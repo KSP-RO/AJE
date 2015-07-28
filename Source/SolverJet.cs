@@ -335,15 +335,15 @@ namespace AJE
             CalculateTTR();
         }
 
-        public void FitEngine(ModuleEnginesAJEJet engineModule)
+        public void FitEngine(double dryThrust, double drySFC, double wetThrust, double defaultTPR = 1d)
         {
-            float TPR = AJEInlet.OverallStaticTPR(engineModule.defaultTPR);
+            float TPR = AJEInlet.OverallStaticTPR((float)defaultTPR);
             SetEngineState(true, 1d);
             SetStaticConditions(usePlanetarium: false, overallTPR : TPR);
 
             double dryThrottle = Tt7 > 0d ? 2d / 3d : 1d;
 
-            drySFC = engineModule.drySFC;
+            this.drySFC = drySFC;
             if (drySFC > 0d)
             {
                 CalculatePerformance(1d, dryThrottle, 1d, 1d);
@@ -351,24 +351,21 @@ namespace AJE
                 {
                     h_f = SolverMathUtil.BrentsMethod(DrySFCFittingFunction, 10e6, 200e6, maxIter: 1000);
                     CalculateTTR();
-                    engineModule.FHV = (float)h_f;
                 }
             }
 
-            dryThrust = engineModule.dryThrust * 1000d;
+            this.dryThrust = dryThrust;
             if (dryThrust > 0d)
             {
                 CalculatePerformance(1d, dryThrottle, 1d, 1d);
 
-                System.Diagnostics.Debug.Assert(engineModule.Area == Aref);
                 Aref *= dryThrust / thrust;
-
-                engineModule.Area = (float)Aref;
             }
-            wetThrust = engineModule.wetThrust * 1000d;
+            this.wetThrust = wetThrust;
             if (wetThrust > 0d)
             {
                 bool doFit = true;
+                double oldTt7 = Tt7;
 
                 if (Tt7 <= 0d)
                     Tt7 = 2500d;
@@ -389,7 +386,7 @@ namespace AJE
 
                     if (thrust >= wetThrust)
                     {
-                        Debug.LogWarning("Cannot fit wet thrust on engine " + engineModule.part.name + " because dry thrust is already greater than specified value.");
+                        Debug.LogWarning("Cannot fit wet thrust on engine because dry thrust is already greater than specified value.");
                         doFit = false;
                     }
 
@@ -397,7 +394,7 @@ namespace AJE
                     CalculatePerformance(1d, 1d, 1d, 1d);
                     if (thrust <= wetThrust)
                     {
-                        Debug.LogWarning("Cannot fit wet thrust on engine " + engineModule.part.name + " because it would require an afterburner temperature of more than 4000 K.");
+                        Debug.LogWarning("Cannot fit wet thrust on engine solver because it would require an afterburner temperature of more than 4000 K.");
                         doFit = false;
                     }
                 }
@@ -405,11 +402,10 @@ namespace AJE
                 if (doFit)
                 {
                     Tt7 = SolverMathUtil.BrentsMethod(WetThrustFittingFunction, th5.T, 4000d, maxIter: 1000);
-                    engineModule.TAB = (float)Tt7;
                 }
                 else
                 {
-                    Tt7 = engineModule.TAB;
+                    Tt7 = oldTt7;
                 }
             }
         }
@@ -430,8 +426,6 @@ namespace AJE
         }
 
         public override double GetEngineTemp() { return th3.T; }
-        // 0.75 is a fudge factor to match engine and intake area until intake spilling, shock capture, etc can actually be modeled
-        // Real engines' intake requirements vary with flight condition, many require suck in doors at low speeds but no way to model that yet
         public override double GetArea() { return Aref * (1d + BPR); }
         public override double GetEmissive() { return fxPower; }
         public override float GetFXPower() { return fxPower; }
@@ -441,6 +435,10 @@ namespace AJE
         public override bool GetRunning() { return combusting; }
 
         public double Prat3 { get { return prat3; } }
+
+        public double GetAref() { return Aref; }
+        public double GetFHV() { return h_f; }
+        public double GetTAB() { return Tt7; }
     }
 
 }
