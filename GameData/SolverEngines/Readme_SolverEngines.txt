@@ -27,6 +27,17 @@ SolverEngines includes a GUI to display useful information about engines in flig
 See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
+v1.9
+* Prevent flight GUI button from disappearing.
+* Fix flameouts at 0 mass requested.
+* Fix a math bug.
+* Add virtuals vFlameout and vUnflameout if a mod wants to override them.
+* Allow required intake area to be adjusted.
+* Cut TPR if insufficient intake area.
+* Auto-unflameout thanks to nimaroth
+* Fix issue with alternators.
+* Fix an issue with engine fitting.
+
 v1.8
 * Fix for GUI issues in 1.7.
 * To avoid the "can't restart engine once propellant is provided again" issue, shutdown and then activate your engine. That will clear its memory of flameouts.
