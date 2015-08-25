@@ -635,8 +635,10 @@ namespace AJE
 
             double local_RPS = RPS < 0.01d ? 0.01d : RPS;
 
-            PowerRequired = cPReq * local_RPS * RPS * local_RPS * D5 * rho;
+            PowerRequired = cPReq * local_RPS * local_RPS * local_RPS * D5 * rho;
             vTorque.x = (-Sense * PowerRequired / (local_RPS * 2.0 * Math.PI));
+
+            //Debug.Log("Cp = " + cPReq);
 
             return PowerRequired;
         }
@@ -677,11 +679,17 @@ namespace AJE
             ThrustCoeff *= CtFactor * CtTweak;
 
             // Apply optional Mach effects from CT_MACH table
+            double CtMachFactor = 1;
             if (CtMach != null)
-                ThrustCoeff *= Math.Pow(CtMach.Evaluate((float)HelicalTipMach), MachPowTweak);
+            {
+                CtMachFactor = Math.Pow(CtMach.Evaluate((float)HelicalTipMach), MachPowTweak);
+                ThrustCoeff *= CtMachFactor;
+
+            }
 
             Thrust = ThrustCoeff * RPS * RPS * D4 * rho;
 
+            //Debug.Log("CT = " + ThrustCoeff + " CtFactor = " + CtFactor + "\n\rCtTweak = " + CtTweak + " CtMachFactor = " + CtMachFactor + "\n\rJ = " + J + "\n\rHelicalTipMach = " + HelicalTipMach + " SoundSpeed = " + speedOfSound);
             /*// Induced velocity in the propeller disk area. This formula is obtained
             // from momentum theory - see B. W. McCormick, "Aerodynamics, Aeronautics,
             // and Flight Mechanics" 1st edition, eqn. 6.15 (propeller analysis chapter).

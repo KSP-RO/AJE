@@ -185,6 +185,7 @@ namespace AJE
                 engineThrust = engine.GetEngineThrust();
                 statusString = engine.GetStatus();
             }
+            thrust += engineThrust;
 
             // now handle propeller
             if (rho > 0d)

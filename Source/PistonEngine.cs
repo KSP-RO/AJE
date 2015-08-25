@@ -59,6 +59,8 @@ namespace AJE
         public double _chargeDensity;
         public double _totalPower;
         public double _engineThrust;
+        public double _netMeredithEffect;
+        public double _netExhaustThrust;
 
         public const double HP2W = 745.699872d;
         public const double W2HP = 1d / HP2W;
@@ -92,9 +94,9 @@ namespace AJE
             _boostCosts[0] = 0d;
             _boostCosts[1] = 0d;
             _boostMode = 0;
-            _boostSwitch = -1d; // auto
-            _coolerEffic = 0d;
-            _coolerMin = 0d;
+            _boostSwitch = -1; // auto
+            _coolerEffic = coolerEffic;
+            _coolerMin = coolerMin;
             _ramAir = ramair;
             _exhaustThrust = exhaustThrust;
             _meredithEffect = meredithEffect;
@@ -232,9 +234,9 @@ namespace AJE
             
             if (body != null)
             {
-                pres0 = body.GetPressure(rated0);
-                pres1 = body.GetPressure(rated1);
-                switchpres = body.GetPressure(switchAlt);
+                pres0 = body.GetPressure(rated0) * 1000;
+                pres1 = body.GetPressure(rated1) * 1000;
+                switchpres = body.GetPressure(switchAlt) * 1000;
             }
             else
             {
@@ -459,6 +461,7 @@ namespace AJE
 
             // Scale the max MP according to the WASTEGATE control input.  Use
             // the un-supercharged MP as the bottom limit.
+
             MAP = Math.Min(MAP, Math.Max(_wastegate * _maxMP, pAmb));
 
             // Scale to throttle setting
@@ -544,7 +547,7 @@ namespace AJE
                     // Compute fuel flow
                     _airFlow = GetAirflow(pAmb, solver.t0, solver.R_c, solver.gamma_c, shaftRPM, MAP);
                     _fuelFlow = _airFlow * fuelRatio;
-                    power = _fuelFlow *  efficiency * _bsfcRecip - _boostCosts[_boostMode];
+                    power = _fuelFlow * efficiency * _bsfcRecip - _boostCosts[_boostMode];
                 }
                 else // auto switch
                 {
@@ -610,13 +613,19 @@ namespace AJE
                 
 
                 // exhaust thrust, normalized to "10% HP in lbf"
-                if(_exhaustThrust != 0d)
-                    _engineThrust += _exhaustThrust * (_totalPower * W2HP * 0.1d * LBFTON) * tempDelta;
+                if (_exhaustThrust != 0d)
+                {
+                    _netExhaustThrust = _exhaustThrust * (_totalPower * W2HP * 0.1d * LBFTON) * tempDelta;
+                    _engineThrust += _netExhaustThrust;
+                }
 
                 // Meredith Effect radiator thrust, scaled by Q and by how hot the engine is running and the ambient temperature
                 // CTOK is there because tempdelta is expressed as a multiple of 0C-in-K (FIXME)
-                if(_meredithEffect != 0d)
-                    _engineThrust += _meredithEffect * solver.Q * (tempDelta * 273.15d / solver.t0);
+                if (_meredithEffect != 0d)
+                {
+                    _netMeredithEffect = _meredithEffect * solver.Q * (tempDelta * 273.15d / solver.t0);
+                    _engineThrust += _netMeredithEffect;
+                }
 
                 //MonoBehaviour.print("Engine running: HP " + power * W2HP + "/" + _totalPower * W2HP + ", rpm " + shaftRPM + ", mp " + _mp + ", charge " + _charge + ", cat " + _chargeTemp + ", chargeRho " + _chargeDensity + ", egt " + _egt + ", fuel " + _fuelFlow + ", airflow " + _airFlow + ", effic " + efficiency);
             }
