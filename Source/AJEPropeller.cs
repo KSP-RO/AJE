@@ -122,8 +122,8 @@ namespace AJE
         //[KSPField(guiActive = true)]
         public double v;
 
-        public const double INHG2ATA = 1d / 760d * 1000d * 0.0254d; // 1 inch of Mercury in atmosphere-absolute
-        public const double INHG2PA = 101325.0d * INHG2ATA; // 1 inch of Mercury in Pascals
+        public const double INHG2ATA = 0.034342; // 1 inch of Mercury in atmosphere-absolute
+        public const double INHG2PA = 3386; // 1 inch of Mercury in Pascals
         public const double PA2INHG = 1d / INHG2PA;
         public const double CTOK = 273.15d;
 
@@ -260,6 +260,8 @@ namespace AJE
             {
                 manifoldPressure = (float)(pistonEngine.GetMAP() * boostMultiplierRecip);
                 chargeAirTemp = (float)pistonEngine.GetChargeTemp();
+                netExhaustThrust = (float)(pistonEngine._netExhaustThrust * 0.001d);
+                netMeredithEffect = (float)(pistonEngine._netMeredithEffect * 0.001d);
             }
             propRPM = (float)solverProp.GetPropRPM();
             propPitch = (float)solverProp.GetPropPitch();
