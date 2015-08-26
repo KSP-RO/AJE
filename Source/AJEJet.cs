@@ -103,6 +103,8 @@ namespace AJE
                 );
             useAtmCurve = atmChangeFlow = useVelCurve = false;
             maxEngineTemp = maxT3;
+            if (autoignitionTemp < 0f || float.IsInfinity(autoignitionTemp))
+                autoignitionTemp = 500f; // Autoignition of Kerosene is 493.15K
 
             if (CPR == 1f)
                 Fields["prat3"].guiActive = false;

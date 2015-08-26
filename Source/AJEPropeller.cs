@@ -203,6 +203,14 @@ namespace AJE
                     // Super/turbo params:
                     wastegateMP * boostMultiplier, boost0 * boostMultiplier, boost1 * boostMultiplier, rated0, rated1, cost1 * powerMultiplier, switchAlt, turbo
                     );
+
+                if (autoignitionTemp < 0f || float.IsInfinity(autoignitionTemp))
+                    autoignitionTemp = 560f; // Approximate for gasoline
+            }
+            else
+            {
+                if (autoignitionTemp < 0f || float.IsInfinity(autoignitionTemp))
+                    autoignitionTemp = 0f;
             }
             engineSolver = solverProp = new SolverPropeller(pistonEngine, powW, BSFC, gearratio, propName, minRPM * gearratio, maxRPM * gearratio, propDiam, propIxx);
 
