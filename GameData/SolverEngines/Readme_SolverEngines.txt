@@ -27,6 +27,13 @@ SolverEngines includes a GUI to display useful information about engines in flig
 See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
+v1.10
+* Fix some NREs.
+* Fix flickering of FX on burnout.
+* Fix error in speed of sound formula; this fixes AJE propellers (with AJE 2.4+)
+* Add hook for temperature-based autorestart.
+* Make displayed actual throttle display two decimal points.
+
 v1.9
 * Prevent flight GUI button from disappearing.
 * Fix flameouts at 0 mass requested.
