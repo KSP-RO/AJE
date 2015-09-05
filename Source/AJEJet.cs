@@ -110,6 +110,9 @@ namespace AJE
                 Fields["prat3"].guiActive = false;
 
             PushAreaToInlet();
+
+            // set heat production
+            heatProduction = Mathf.Min(10f, (1f - eta_c) * (1f - eta_t) * (1f - eta_n) * (10000f + TAB * 10f) / (1f + BPR * 0.5f));
         }
 
         public override void CreateEngineIfNecessary()
