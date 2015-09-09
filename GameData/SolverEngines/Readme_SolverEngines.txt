@@ -27,6 +27,9 @@ SolverEngines includes a GUI to display useful information about engines in flig
 See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
+v1.11
+* Make heat production quadratic with throttle rather than linear.
+
 v1.10
 * Fix some NREs.
 * Fix flickering of FX on burnout.
