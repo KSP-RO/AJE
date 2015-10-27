@@ -398,7 +398,8 @@ namespace AJE
             double swept_volume = (_displacement * speed * (1d/60d)) * 0.5d;
             double v_dot_air = swept_volume * GetPressureVE(pAmb, MAP, gamma) * _voleffic * _volEfficMult;
 
-            _chargeDensity = MAP / (RAir * GetCAT(MAP, pAmb, tAmb));
+            _chargeTemp = GetCAT(MAP, pAmb, tAmb);
+            _chargeDensity = MAP / (RAir * _chargeTemp);
             return v_dot_air * _chargeDensity;
         }
 
@@ -590,7 +591,7 @@ namespace AJE
                 }
 
                 _mp = MAP;
-                _chargeTemp = GetCAT(MAP, pAmb, solver.t0); // duplication of effort, but oh well
+                //_chargeTemp = GetCAT(MAP, pAmb, solver.t0); // duplication of effort, but oh well
 
                 // The "boost" is the delta above ambient
                 _boostPressure = _mp - pAmb;
