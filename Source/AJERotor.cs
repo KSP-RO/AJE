@@ -7,7 +7,7 @@ using SolverEngines;
 
 namespace AJE
 {
-    public class ModuleEnginesAJERotor : ModuleEnginesSolver, IModuleInfo
+    public class ModuleEnginesAJERotor : ModuleEnginesSolver, IModuleInfo, IEngineStatus
     {
         #region Fields
 
