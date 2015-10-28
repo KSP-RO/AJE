@@ -577,6 +577,7 @@ namespace AJE
                         _airFlow = airflow0;
                         _fuelFlow = m_dot_fuel0;
                         _boostMode = 0;
+                        _chargeTemp = GetCAT(MAP, pAmb, solver.t0); // duplication of effort, but oh well, this needs to be done to reset _chargeTemp
                     }
                     else
                     {

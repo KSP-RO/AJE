@@ -11,7 +11,7 @@ using SolverEngines;
 namespace AJE
 {
 
-    public class ModuleEnginesAJEJet : ModuleEnginesSolver, IModuleInfo
+    public class ModuleEnginesAJEJet : ModuleEnginesSolver, IModuleInfo, IEngineStatus
     {
         [EngineFitResult]
         [KSPField(isPersistant = false, guiActive = false)]
