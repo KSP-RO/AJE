@@ -139,24 +139,34 @@ namespace AJE
         {
             base.CalculatePerformance(airRatio, commandedThrottle, flowMult, ispMult);
 
+            combusting = running;
+            statusString = "Nominal";
+            if (ffFraction <= 0d)
+            {
+                combusting = false;
+                statusString = "No fuel";
+            }
+            else if (underwater)
+            {
+                combusting = false;
+                statusString = "Underwater";
+            }
+
             shaftPower = 0d;
             engineThrust = 0d;
             double deltaTime = TimeWarp.fixedDeltaTime;
             if (engine == null)
             {
-                combusting = running;
-                statusString = "Nominal";
-                if (ffFraction <= 0d)
-                {
-                    combusting = false;
-                    statusString = "No fuel";
-                    fxPower = 0f;
-                }
+
                 if (combusting)
                 {
                     fxPower = (float)throttle;
                     shaftPower = maxPower * throttle * ispMult * flowMult;
                     fuelFlow = shaftPower * BSFC * flowMult;
+                }
+                else
+                {
+                    fxPower = 0f;
                 }
                 if (shaftPower > 0d)
                 {
@@ -180,7 +190,6 @@ namespace AJE
                 shaftPower = engine.GetShaftPower() * ispMult * flowMult;
                 fuelFlow = engine.GetFuelFlow() * flowMult;
                 temperature = engine.GetTemp();
-                combusting = fuelFlow > 0d;
                 fxPower = engine.GetFXPower();
                 engineThrust = engine.GetEngineThrust();
                 statusString = engine.GetStatus();

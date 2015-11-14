@@ -149,20 +149,25 @@ namespace AJE
                 combusting = false;
                 statusString = "No oxygen";
             }
-            else if(ffFraction <= 0d)
+            else if (ffFraction <= 0d)
             {
                 combusting = false;
                 statusString = "No fuel";
             }
-            else if(CPR == 1 && M0 < 0.3d)
+            else if (CPR == 1 && M0 < 0.3d)
             {
                 combusting = false;
                 statusString = "Below ignition speed";
             }
-            else if(airRatio < 0.01d)
+            else if (airRatio < 0.01d)
             {
                 combusting = false;
                 statusString = "Insufficient intake area";
+            }
+            else if (underwater)
+            {
+                combusting = false;
+                statusString = "Nozzle in water";
             }
 
             if (combusting)

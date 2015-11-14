@@ -57,6 +57,11 @@ namespace AJE
                 combusting = false;
                 statusString = "No fuel";
             }
+            else if (underwater)
+            {
+                combusting = false;
+                statusString = "Underwater";
+            }
 
             if (combusting)
             {
