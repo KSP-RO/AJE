@@ -433,10 +433,10 @@ namespace AJE
         public override double GetEngineTemp() { return th3.T; }
         public override double GetArea() { return Aref * (1d + BPR); }
         public override double GetEmissive() { return fxPower; }
-        public override float GetFXPower() { return fxPower; }
+        public override float GetFXPower() { return (float)abThrottle; }
         public override float GetFXRunning() { return fxPower; }
         public override float GetFXThrottle() { return fxPower; }
-        public override float GetFXSpool() { return fxPower; }
+        public override float GetFXSpool() { return (float)mainThrottle; }
         public override bool GetRunning() { return combusting; }
 
         public double Prat3 { get { return prat3; } }

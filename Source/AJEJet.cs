@@ -76,6 +76,11 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public float wetThrust = 0f;
 
+        [KSPField(isPersistant = false, guiActive = false)]
+        public string spoolEffectName2 = "spool2";
+        [KSPField(isPersistant = false, guiActive = false)]
+        public string powerEffectName2 = "power2";
+
         [KSPField(isPersistant = false, guiActive = true, guiName = "Compression Ratio", guiFormat = "F1")]
         public float prat3 = 0f;
         
@@ -152,6 +157,14 @@ namespace AJE
         public override float RequiredIntakeArea()
         {
             return base.RequiredIntakeArea() * areaFudgeFactor;
+        }
+
+        public override void FXUpdate()
+        {
+            base.FXUpdate();
+            
+            part.Effect(spoolEffectName2, engineSolver.GetFXSpool());
+            part.Effect(powerEffectName2, engineSolver.GetFXPower());
         }
 
         #region Engine Fitting
