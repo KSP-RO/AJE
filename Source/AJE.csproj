@@ -32,6 +32,8 @@
     </Compile>
     <Compile Include="AJEPropeller.cs" />
     <Compile Include="AJERotor.cs" />
+    <Compile Include="ModuleAJEJetAnimateNozzle.cs" />
+    <Compile Include="ModuleAnimateHeatAJEJet.cs" />
     <Compile Include="SolverRotor.cs" />
     <Compile Include="SolverJet.cs" />
     <Compile Include="JSBProp.cs" />

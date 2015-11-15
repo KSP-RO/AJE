@@ -151,7 +151,7 @@ namespace AJE
         public override void CalculateEngineParams()
         {
             base.CalculateEngineParams();
-            prat3 = (float)(engineSolver as SolverJet).Prat3;
+            prat3 = (float)(engineSolver as SolverJet).GetPrat3();
         }
 
         public override float RequiredIntakeArea()
@@ -165,6 +165,22 @@ namespace AJE
             
             part.Effect(spoolEffectName2, engineSolver.GetFXSpool());
             part.Effect(powerEffectName2, engineSolver.GetFXPower());
+        }
+
+        public double GetEmissiveTemp()
+        {
+            if (isOperational)
+                return (engineSolver as SolverJet).GetT7();
+            else
+                return part.temperature;
+        }
+
+        public float GetRelativeNozzleArea()
+        {
+            if (isOperational)
+                return (float)(engineSolver as SolverJet).GetNozzleArea() / Need_Area;
+            else
+                return 0f;
         }
 
         #region Engine Fitting
@@ -286,7 +302,7 @@ namespace AJE
                 output += "\n<b>Required Area:</b> " + RequiredIntakeArea().ToString("F3") + " m^2";
                 if (BPR > 0f)
                     output += "\n<b>Bypass Ratio:</b> " + BPR.ToString("F2");
-                output += "\n<b>Compression Ratio (static):</b> " + (engineSolver as SolverJet).Prat3.ToString("F1") + "\n";
+                output += "\n<b>Compression Ratio (static):</b> " + (engineSolver as SolverJet).GetPrat3().ToString("F1") + "\n";
             }
 
             EngineIgnited = oldE;
