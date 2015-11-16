@@ -106,7 +106,7 @@ namespace AJE
                 exhaustMixer,
                 adjustableNozzle
                 );
-            useAtmCurve = atmChangeFlow = useVelCurve = false;
+            useAtmCurve = atmChangeFlow = useVelCurve = useAtmCurveIsp = useVelCurveIsp = false;
             maxEngineTemp = maxT3;
             if (autoignitionTemp < 0f || float.IsInfinity(autoignitionTemp))
                 autoignitionTemp = 500f; // Autoignition of Kerosene is 493.15K

@@ -66,7 +66,7 @@ namespace AJE
             sasY = sas.YawTorque;
             sasR = sas.RollTorque;
 
-            useAtmCurve = atmChangeFlow = useVelCurve = false;
+            useAtmCurve = atmChangeFlow = useVelCurve = useAtmCurveIsp = useVelCurveIsp = false;
         }
 
         #endregion

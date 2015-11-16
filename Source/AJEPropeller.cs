@@ -222,6 +222,8 @@ namespace AJE
                 Fields["netMeredithEffect"].guiActive = false;
 
             Fields["statusL2"].guiActive = true; // always show
+
+            useAtmCurve = atmChangeFlow = useVelCurve = useAtmCurveIsp = useVelCurveIsp = false;
         }
 
         public override void OnStart(StartState state)
