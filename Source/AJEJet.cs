@@ -126,6 +126,13 @@ namespace AJE
                 CreateEngine();
         }
 
+        public override void Shutdown()
+        {
+            base.Shutdown();
+            currentThrottle = 0.01f;
+            base.UpdateThrottle();
+        }
+
         public override void UpdateThrottle()
         {
             if (CPR != 1)
