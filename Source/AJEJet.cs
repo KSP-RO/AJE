@@ -192,33 +192,6 @@ namespace AJE
 
         #region Engine Fitting
 
-        public override bool ShouldFitParameter(EngineParameterInfo info)
-        {
-            if (!base.ShouldFitParameter(info))
-                return false;
-
-            if (CPR == 1f)
-                return false;
-
-            if (info.Field.Name == "Area")
-            {
-                if (dryThrust > 0f)
-                    return true;
-            }
-            else if (info.Field.Name == "FHV")
-            {
-                if (drySFC > 0f)
-                    return true;
-            }
-            else if (info.Field.Name == "TAB")
-            {
-                if (wetThrust > 0f)
-                    return true;
-            }
-
-            return false;
-        }
-
         public override void PushFitParamsToSolver()
         {
             (engineSolver as SolverJet).SetFitParams(Area, FHV, TAB);
