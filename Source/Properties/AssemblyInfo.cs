@@ -37,4 +37,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyFileVersion("2.5.2.0")]
 
 // Keep this the same
-[assembly: KSPAssemblyDependency("SolverEngines", 1, 13)]
+[assembly: KSPAssemblyDependency("SolverEngines", 1, 14)]

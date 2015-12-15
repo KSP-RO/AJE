@@ -27,6 +27,10 @@ SolverEngines includes a GUI to display useful information about engines in flig
 See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
+v1.14
+* Minor refactor of engine fitting
+* Get rid of debug spam for non Earth/Kerbin atmospheres
+
 v1.13
 * Respect the "Ignore Max Temperature" cheat option.
 
