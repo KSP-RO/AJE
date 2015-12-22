@@ -15,8 +15,8 @@ namespace AJE
         //compressor pressure ratio, turbine temperature ratio, 
         private double BPR, FPR, CPR, TTR, inv_BPRp1;
 
-        //fan ratio constant = FPR/CPR
-        private double FRC;
+        //fan work constant = fan work / compressor work
+        private double fanWorkConstant;
 
         //engine design point; mach number, temperature 
         private double M_d, T_d;
@@ -62,6 +62,9 @@ namespace AJE
         private double Aref, Acomb, Anozzle;
         private double spoolFactor;
 
+        // Minimum (idle) throttle, i.e. lerp value between compressor temperature and TIT at idle
+        private double minThrottle;
+
         //use exhaust mixer or not
         private bool exhaustMixer;
 
@@ -90,6 +93,7 @@ namespace AJE
             double heatOfFuel,
             double max_TIT,
             double max_TAB,
+            double idleThrottle,
             bool useExhaustMixer,
             bool supersonicNozzle
             )
@@ -100,7 +104,6 @@ namespace AJE
             BPR = bypassRatio; inv_BPRp1 = 1d / (1d + BPR);
             CPR = compressorRatio;
             FPR = fanRatio;
-            FRC = FPR / CPR;
             M_d = designMach;
             T_d = designTemperature;
             eta_c = compressorEta; inv_eta_c = 1d / eta_c;
@@ -109,6 +112,7 @@ namespace AJE
             h_f = heatOfFuel;
             Tt4 = max_TIT;
             Tt7 = max_TAB;
+            minThrottle = idleThrottle;
             exhaustMixer = useExhaustMixer;
             adjustableNozzle = supersonicNozzle;
 
@@ -128,9 +132,14 @@ namespace AJE
             inletTherm.FromChangeReferenceFrameMach(ambientTherm, M_d);
             // Note that this work is negative
             // Different mass flows between compressor, turbine, and bypass automatically taken care of by MassRatio
-            double turbineWork = th3.FromAdiabaticProcessWithPressureRatio(inletTherm, CPR, efficiency: eta_c);
+            double compressorWork = th3.FromAdiabaticProcessWithPressureRatio(inletTherm, CPR, efficiency: eta_c);
+            double fanWork = 0d;
             if (BPR > 0d)
-                turbineWork += th2.FromAdiabaticProcessWithPressureRatio(inletTherm, FPR, efficiency: eta_c) * BPR;
+            {
+                fanWork = th2.FromAdiabaticProcessWithPressureRatio(inletTherm, FPR, efficiency: eta_c) * BPR;
+                fanWorkConstant = fanWork / compressorWork;
+            }
+            double turbineWork = compressorWork + fanWork;
             th4.FromAddFuelToTemperature(th3, Tt4, h_f);
             th5.FromAdiabaticProcessWithWork(th4, turbineWork, efficiency: eta_t);
             TTR = th5.T / th4.T;
@@ -184,22 +193,24 @@ namespace AJE
                     abThrottle = Math.Max(commandedThrottle * 3d - 2d, 0);
                 }
 
+                double coreThrottle = SolverMathUtil.Lerp(minThrottle, 1d, mainThrottle);
+
                 prat3 = CPR;
-                double p = Math.Pow(FRC, (th1.Gamma - 1) * inv_eta_c / th1.Gamma);
                 double invfac = eta_c * th1.Gamma / (th1.Gamma - 1.0);
+                double turbineWork = 0d;
                 for (int i = 0; i < 20; i++)    //use iteration to calculate CPR
                 {
                     th3.FromAdiabaticProcessWithPressureRatio(th1, prat3, efficiency: eta_c);
                     // FIXME use ffFraction here? Instead of just multiplying thrust by fuel fraction in the module?
                     // is so, set multiplyThrustByFuelFrac = false in the ModuleEnginesAJEJet.
-                    th4.FromAddFuelToTemperature(th3, Tt4, h_f, throttle: mainThrottle);
-                    double turbineWork = th5.FromAdiabaticProcessWithTempRatio(th4, TTR, eta_t);
+                    th4.FromAddFuelToTemperature(th3, Tt4, h_f, throttle: coreThrottle);
+                    turbineWork = th5.FromAdiabaticProcessWithTempRatio(th4, TTR, eta_t);
+                    
+                    th3.FromAdiabaticProcessWithWork(th1, turbineWork / (1d + fanWorkConstant), efficiency: eta_c);
 
                     double x = prat3;
 
-                    prat3 = turbineWork / th1.T / th1.Cp + 1d + BPR;
-                    prat3 /= 1d + BPR * p;
-                    prat3 = Math.Pow(prat3, invfac);
+                    prat3 = th3.P / th1.P;
 
                     if (Math.Abs(x - prat3) < 0.01)
                         break;
@@ -207,9 +218,9 @@ namespace AJE
 
                 if (BPR > 0d)
                 {
-                    prat2 = FRC * prat3;
-                    th2.FromAdiabaticProcessWithPressureRatio(th1, prat2, efficiency: eta_c);
+                    th2.FromAdiabaticProcessWithWork(th1, turbineWork * fanWorkConstant / (1d + fanWorkConstant) / BPR, efficiency: eta_c);
                     th2.MassRatio = BPR;
+                    prat2 = th2.P / th1.P;
                 }
 
                 if (exhaustMixer && BPR > 0)//exhaust mixer
@@ -332,9 +343,10 @@ namespace AJE
                 fxPower = (float)(mainThrottle * 0.25d + abThrottle * 0.75d);
         }
 
-        public void SetFitParams(double area, double fhv, double TAB)
+        public void SetFitParams(double area, double fhv, double TAB, double idleThrottle)
         {
             h_f = fhv;
+            minThrottle = idleThrottle;
             Aref = area;
             Tt7 = TAB;
             CalculateTTR();
@@ -342,6 +354,8 @@ namespace AJE
 
         public void FitEngine(double dryThrust, double drySFC, double wetThrust, double defaultTPR = 1d)
         {
+            if (CPR == 1d)
+                return;
             float TPR = AJEInlet.OverallStaticTPR((float)defaultTPR);
             SetEngineState(true, 1d);
             SetStaticConditions(usePlanetarium: false, overallTPR : TPR);
@@ -356,6 +370,30 @@ namespace AJE
                 {
                     h_f = SolverMathUtil.BrentsMethod(DrySFCFittingFunction, 10e6, 200e6, maxIter: 1000);
                     CalculateTTR();
+                }
+            }
+
+            // Min throttle
+            // Set to make sure tailpipe pressure is greater than ambient
+
+            minThrottle = 0.01f;
+            CalculatePerformance(1d, 0f, 1d, 1d);
+
+            if (th7.P > 1.25 * th0.P)
+            {
+                minThrottle = 0.01f;
+            }
+            else
+            {
+                CalculatePerformance(1d, dryThrottle, 1d, 1d);
+                if (th7.P < 1.25 * th0.P)
+                {
+                    Debug.Log("Cannot fit min throttle because jet pipe pressure is too low.  Perhaps TIT is too low or CPR is too high.");
+                    minThrottle = 0.01f;
+                }
+                else
+                {
+                    minThrottle = SolverMathUtil.BrentsMethod(MinThrottleFittingFunction, 0.01f, 1f, maxIter: 1000);
                 }
             }
 
@@ -423,6 +461,13 @@ namespace AJE
             return SFC - drySFC;
         }
 
+        private double MinThrottleFittingFunction(double minThrottle)
+        {
+            this.minThrottle = minThrottle;
+            CalculatePerformance(1d, 0d, 1d, 1d);
+            return th0.P * 1.25 - th7.P;
+        }
+
         private double WetThrustFittingFunction(double TAB)
         {
             Tt7 = TAB;
@@ -446,6 +491,7 @@ namespace AJE
         public double GetAref() { return Aref; }
         public double GetFHV() { return h_f; }
         public double GetTAB() { return Tt7; }
+        public double GetMinThrottle() { return minThrottle; }
     }
 
 }

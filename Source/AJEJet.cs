@@ -66,6 +66,9 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public float areaFudgeFactor = 0.75f;
 
+        [EngineFitResult]
+        public float minThrottle = 0.01f;
+
         [EngineFitData]
         [KSPField(isPersistant = false, guiActive = false)]
         public float drySFC = 0f;
@@ -103,6 +106,7 @@ namespace AJE
                 FHV,
                 TIT,
                 TAB,
+                minThrottle,
                 exhaustMixer,
                 adjustableNozzle
                 );
@@ -150,8 +154,8 @@ namespace AJE
             else // ramjet
             {
                 currentThrottle = (float)(requestedThrottle * thrustPercentage * 0.01);
+                currentThrottle = Mathf.Max(0.01f, currentThrottle);
             }
-            currentThrottle = Mathf.Max(0.01f, currentThrottle);
             base.UpdateThrottle();
         }
 
@@ -194,7 +198,7 @@ namespace AJE
 
         public override void PushFitParamsToSolver()
         {
-            (engineSolver as SolverJet).SetFitParams(Area, FHV, TAB);
+            (engineSolver as SolverJet).SetFitParams(Area, FHV, TAB, minThrottle);
             PushAreaToInlet();
         }
 
@@ -206,6 +210,7 @@ namespace AJE
             Area = (float)jetEngine.GetAref();
             FHV = (float)jetEngine.GetFHV();
             TAB = (float)jetEngine.GetTAB();
+            minThrottle = (float)jetEngine.GetMinThrottle();
 
             PushAreaToInlet();
         }
