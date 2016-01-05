@@ -62,6 +62,9 @@ namespace AJE
         private double Aref, Acomb, Anozzle;
         private double spoolFactor;
 
+        //Ratio of turbine area to reference area
+        private double turbineAreaRatio;
+
         // Minimum (idle) throttle, i.e. lerp value between compressor temperature and TIT at idle
         private double minThrottle;
 
@@ -94,6 +97,7 @@ namespace AJE
             double max_TIT,
             double max_TAB,
             double idleThrottle,
+            double TAR,
             bool useExhaustMixer,
             bool supersonicNozzle
             )
@@ -113,6 +117,7 @@ namespace AJE
             Tt4 = max_TIT;
             Tt7 = max_TAB;
             minThrottle = idleThrottle;
+            turbineAreaRatio = TAR;
             exhaustMixer = useExhaustMixer;
             adjustableNozzle = supersonicNozzle;
 
@@ -262,10 +267,8 @@ namespace AJE
                 //    Math.Pow((0.5d + 0.5d * th7.Gamma), 0.5d * (1d + th7.Gamma) / (1d - th7.Gamma));//corrected mass flow per area
                 //mdot = eair * A8;
 
-                // New way - make M=0.5 explicit
-                // Later will be adjusted by prat3
-                double compressorEntryMach = 0.5;
-                coreAirflow = th1.CalculateMassFlow(Aref, compressorEntryMach);
+                // Assume turbine is choked all the time
+                coreAirflow = th4.CalculateMassFlow(Aref * turbineAreaRatio, 1d) / th4.MassRatio;
                 mdot = th7.MassRatio * coreAirflow;
 
                 if (!adjustableNozzle)
@@ -343,12 +346,13 @@ namespace AJE
                 fxPower = (float)(mainThrottle * 0.25d + abThrottle * 0.75d);
         }
 
-        public void SetFitParams(double area, double fhv, double TAB, double idleThrottle)
+        public void SetFitParams(double area, double fhv, double TAB, double idleThrottle, double TAR)
         {
             h_f = fhv;
             minThrottle = idleThrottle;
             Aref = area;
             Tt7 = TAB;
+            turbineAreaRatio = TAR;
             CalculateTTR();
         }
 
@@ -396,6 +400,11 @@ namespace AJE
                     minThrottle = SolverMathUtil.BrentsMethod(MinThrottleFittingFunction, 0.01f, 1f, maxIter: 1000);
                 }
             }
+
+            CalculatePerformance(1d, dryThrottle, 1d, 1d);
+            double aTurbine = th4.CalculateFlowArea(coreAirflow * th4.MassRatio, 1d);
+            double fakeAref = th1.CalculateFlowArea(coreAirflow, 0.5d);
+            turbineAreaRatio = aTurbine / fakeAref;
 
             this.dryThrust = dryThrust;
             if (dryThrust > 0d)
@@ -492,6 +501,7 @@ namespace AJE
         public double GetFHV() { return h_f; }
         public double GetTAB() { return Tt7; }
         public double GetMinThrottle() { return minThrottle; }
+        public double GetTurbineAreaRatio() { return turbineAreaRatio; }
     }
 
 }

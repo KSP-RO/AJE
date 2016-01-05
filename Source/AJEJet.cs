@@ -68,6 +68,8 @@ namespace AJE
 
         [EngineFitResult]
         public float minThrottle = 0.01f;
+        [EngineFitResult]
+        public float turbineAreaRatio = 0.75f;
 
         [EngineFitData]
         [KSPField(isPersistant = false, guiActive = false)]
@@ -107,6 +109,7 @@ namespace AJE
                 TIT,
                 TAB,
                 minThrottle,
+                turbineAreaRatio,
                 exhaustMixer,
                 adjustableNozzle
                 );
@@ -198,7 +201,7 @@ namespace AJE
 
         public override void PushFitParamsToSolver()
         {
-            (engineSolver as SolverJet).SetFitParams(Area, FHV, TAB, minThrottle);
+            (engineSolver as SolverJet).SetFitParams(Area, FHV, TAB, minThrottle, turbineAreaRatio);
             PushAreaToInlet();
         }
 
@@ -211,6 +214,7 @@ namespace AJE
             FHV = (float)jetEngine.GetFHV();
             TAB = (float)jetEngine.GetTAB();
             minThrottle = (float)jetEngine.GetMinThrottle();
+            turbineAreaRatio = (float)jetEngine.GetTurbineAreaRatio();
 
             PushAreaToInlet();
         }
