@@ -249,10 +249,8 @@ namespace AJE
             areaRatio = 1d;
             currentThrottle = 1f;
             lastPropellantFraction = 1d;
-            bool oldE = EngineIgnited;
-            EngineIgnited = true;
-            
-            UpdateFlightCondition(ambientTherm, 0d, Vector3d.zero, 0d, true, false);
+
+            UpdateSolver(ambientTherm, 0d, Vector3d.zero, 0d, true, true, false);
             double thrust = (engineSolver.GetThrust() * 0.001d);
 
             if (CPR == 1f) // ramjet
@@ -278,7 +276,7 @@ namespace AJE
                     if (!primaryField)
                         output += "\n   <b>SFC: </b>" + engineSolver.GetSFC().ToString("N4") + " kg/kgf-h";
                     currentThrottle = 2f / 3f;
-                    UpdateFlightCondition(ambientTherm, 0d, Vector3d.zero, 0d, true, false);
+                    UpdateSolver(ambientTherm, 0d, Vector3d.zero, 0d, true, true, false);
                     thrust = (engineSolver.GetThrust() * 0.001d);
                     output += "\n<b>Static Thrust (dry): </b>" + thrust.ToString("N2") + " kN";
                     if (!primaryField)
@@ -293,8 +291,7 @@ namespace AJE
                     output += "\n<b>Bypass Ratio:</b> " + BPR.ToString("F2");
                 output += "\n<b>Compression Ratio (static):</b> " + (engineSolver as SolverJet).GetPrat3().ToString("F1") + "\n";
             }
-
-            EngineIgnited = oldE;
+            
             return output;
         }
         public override string GetModuleTitle()

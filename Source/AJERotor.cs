@@ -79,7 +79,7 @@ namespace AJE
             base.UpdateThrottle();
         }
 
-        public override void UpdateFlightCondition(EngineThermodynamics ambientTherm, double altitude, Vector3d vel, double mach, bool oxygen, bool underwater)
+        public override void UpdateSolver(EngineThermodynamics ambientTherm, double altitude, Vector3d vel, double mach, bool ignited, bool oxygen, bool underwater)
         {
             Vector3 t = thrustTransforms[0].forward.normalized;
 
@@ -88,7 +88,7 @@ namespace AJE
 
             (engineSolver as SolverRotor).UpdateFlightParams(vx, vz);
 
-            base.UpdateFlightCondition(ambientTherm, altitude, vel, mach, oxygen, underwater);
+            base.UpdateSolver(ambientTherm, altitude, vel, mach, ignited, oxygen, underwater);
         }
 
         public override void CalculateEngineParams()
@@ -127,17 +127,13 @@ namespace AJE
 
             currentThrottle = 1f;
             lastPropellantFraction = 1d;
-            bool oldE = EngineIgnited;
-            EngineIgnited = true;
 
-            UpdateFlightCondition(ambientTherm, 0d, Vector3.zero, 0d, true, false);
+            UpdateFlightCondition(ambientTherm, 0d, Vector3.zero, 0d, true, true, false);
             double thrust = (engineSolver.GetThrust() * 0.001d);
             double power = ((engineSolver as SolverRotor).GetPower() / 745.7d);
 
             output += "<b>Static Power: </b>" + power.ToString("F0") + " HP\n";
             output += "<b>Static Thrust: </b>" + thrust.ToString("F2") + " kN\n";
-
-            EngineIgnited = oldE;
 
             return output;
         }

@@ -240,7 +240,7 @@ namespace AJE
             currentThrottle = requestedThrottle; // instant throttle response
             base.UpdateThrottle();
         }
-        public override void UpdateFlightCondition(EngineThermodynamics ambientTherm, double altitude, Vector3d vel, double mach, bool oxygen, bool underwater)
+        public override void UpdateSolver(EngineThermodynamics ambientTherm, double altitude, Vector3d vel, double mach, bool ignited, bool oxygen, bool underwater)
         {
             // change up the velocity vector, it's now vs the engine part.
             v = Vector3d.Dot(vel, -thrustTransforms[0].forward);
@@ -256,7 +256,7 @@ namespace AJE
             solverProp.SetRPMLever(rpmLever);
             solverProp.SetTweaks(CtTweak, CpTweak, VolETweak, MachPowTweak);
 
-            base.UpdateFlightCondition(ambientTherm, altitude, vel, mach, oxygen, underwater);
+            base.UpdateSolver(ambientTherm, altitude, vel, mach, ignited, oxygen, underwater);
         }
         public override void CalculateEngineParams()
         {
