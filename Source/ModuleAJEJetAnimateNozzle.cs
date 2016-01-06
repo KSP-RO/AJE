@@ -29,10 +29,15 @@ namespace AJE
         [KSPField]
         public FloatCurve animCurve = new FloatCurve();
 
-        // [KSPField(guiActive = true)]
+#if DEBUG
+        [KSPField(guiActive = true)]
+#endif
         protected float relativeNozzleArea = 0f;
 
-        // [KSPField(guiActive = true)]
+
+#if DEBUG
+        [KSPField(guiActive = true)]
+#endif
         protected float animationState = 0f;
 
         protected ModuleEnginesAJEJet engineModule;

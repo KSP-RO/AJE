@@ -10,8 +10,10 @@ namespace AJE
     {
         [KSPField]
         public string engineID = null;
-
-        // [KSPField(guiActive = true)]
+        
+#if DEBUG
+        [KSPField(guiActive = true)]
+#endif
         protected double emissiveTemp = 0d;
 
         private ModuleEnginesAJEJet engineModule;
