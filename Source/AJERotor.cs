@@ -128,7 +128,7 @@ namespace AJE
             currentThrottle = 1f;
             lastPropellantFraction = 1d;
 
-            UpdateFlightCondition(ambientTherm, 0d, Vector3.zero, 0d, true, true, false);
+            UpdateSolver(ambientTherm, 0d, Vector3.zero, 0d, true, true, false);
             double thrust = (engineSolver.GetThrust() * 0.001d);
             double power = ((engineSolver as SolverRotor).GetPower() / 745.7d);
 

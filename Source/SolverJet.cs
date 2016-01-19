@@ -284,7 +284,8 @@ namespace AJE
                 double exitEnergy = th7.Cp * th7.T * eta_n * (1.0 - Math.Pow(p8 / th7.P, th7.R / th7.Cp));
                 V8 = Math.Sqrt(Math.Abs(2d * exitEnergy));     //exit velocity - may be negative under certain conditions
                 V8 *= Math.Sign(exitEnergy);
-                Anozzle = th7.CalculateFlowArea(mdot, th7.CalculateMach(Math.Abs(V8)));
+                double exitMach = th7.CalculateMach(Math.Abs(V8));
+                Anozzle = th7.CalculateFlowArea(mdot, exitMach);
                 thrust = V8 * mdot + (p8 - th0.P) * Anozzle;
                 thrust -= mdot * (1d - th7.FF) * (vel);//ram drag
 
@@ -364,7 +365,7 @@ namespace AJE
             SetEngineState(true, 1d);
             SetStaticConditions(usePlanetarium: false, overallTPR : TPR);
 
-            double dryThrottle = Tt7 > 0d ? 2d / 3d : 1d;
+            double dryThrottle = Afterburning ? 2d / 3d : 1d;
 
             this.drySFC = drySFC;
             if (drySFC > 0d)
@@ -494,14 +495,18 @@ namespace AJE
         public override bool GetRunning() { return combusting; }
 
         public double GetPrat3() { return prat3; }
-        public double GetT7() { return th7.T; }
+        public double GetExhaustTemp() { return th7.T; }
         public double GetNozzleArea() { return Anozzle; }
+        public double GetCoreThrottle() { return mainThrottle; }
+        public double GetABThrottle() { return Afterburning ? abThrottle : 0d; }
 
         public double GetAref() { return Aref; }
         public double GetFHV() { return h_f; }
         public double GetTAB() { return Tt7; }
         public double GetMinThrottle() { return minThrottle; }
         public double GetTurbineAreaRatio() { return turbineAreaRatio; }
+
+        public bool Afterburning => (Tt7 > 0d);
     }
 
 }
