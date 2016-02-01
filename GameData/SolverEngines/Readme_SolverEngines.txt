@@ -27,6 +27,12 @@ SolverEngines includes a GUI to display useful information about engines in flig
 See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
+
+v1.15
+* Add some math utils
+* Adjust UpdateFlightCondition to better accommodate simulations
+* Add a generic animation class
+
 v1.14
 * Minor refactor of engine fitting
 * Get rid of debug spam for non Earth/Kerbin atmospheres
