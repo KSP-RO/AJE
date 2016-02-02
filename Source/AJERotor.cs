@@ -62,9 +62,12 @@ namespace AJE
 //            power *= 745.7f;
             engineSolver = new SolverRotor(omega, r, weight, power * 745.7f, 1.2f, VTOLbuff, BSFC, useOxygen);
             sas = part.FindModuleImplementing<ModuleReactionWheel>();
-            sasP = sas.PitchTorque;
-            sasY = sas.YawTorque;
-            sasR = sas.RollTorque;
+            if (sas != null)
+            {
+                sasP = sas.PitchTorque;
+                sasY = sas.YawTorque;
+                sasR = sas.RollTorque;
+            }
 
             useAtmCurve = atmChangeFlow = useVelCurve = useAtmCurveIsp = useVelCurveIsp = false;
         }
@@ -100,9 +103,16 @@ namespace AJE
             if (sas != null)
             {
                 float sasMultiplier = (float)(engineSolver as SolverRotor).SASMultiplier();
-                sas.PitchTorque = sasP * sasMultiplier;
-                sas.YawTorque = sasY * sasMultiplier;
-                sas.RollTorque = sasR * sasMultiplier;
+                if (float.IsNaN(sasMultiplier) || float.IsInfinity(sasMultiplier))
+                {
+                    Debug.LogError(this.GetType().Name + " on part " + part.partInfo.name + ": invalid SAS multiplier encountered: " + sasMultiplier.ToString());
+                }
+                else
+                {
+                    sas.PitchTorque = sasP * sasMultiplier;
+                    sas.YawTorque = sasY * sasMultiplier;
+                    sas.RollTorque = sasR * sasMultiplier;
+                }
             }
         }
 

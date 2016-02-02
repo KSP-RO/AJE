@@ -65,7 +65,7 @@ namespace AJE
 
             if (combusting)
             {
-                power = power0 * Math.Min(1d, rho / rho0) * throttle;
+                power = power0 * Math.Min(1d, rho / rho0) * SolverMathUtil.Lerp(0.01d, 1d, throttle);
 
                 double x = vz * weight * 9.80665d / power;
                 torque = power / omega / Math.Pow((x / buff + 1d), buff);
