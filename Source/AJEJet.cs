@@ -89,6 +89,9 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public string powerEffectName2 = "power2";
 
+        [KSPField]
+        public float throttleResponseMultiplier = 1f;
+
         [KSPField(isPersistant = false, guiActive = true, guiName = "Compression Ratio", guiFormat = "F1")]
         public float prat3 = 0f;
 
@@ -157,7 +160,7 @@ namespace AJE
             {
                 double requiredThrottle = requestedThrottle * thrustPercentage * 0.01d;
                 double deltaT = TimeWarp.fixedDeltaTime;
-                double throttleResponseRate = Math.Max(2 / Area / (1 + BPR), 5) * 0.01d; //percent per second
+                double throttleResponseRate = Math.Max(2 / Area / (1 + BPR), 5) * throttleResponseMultiplier * 0.01d; //percent per second
 
                 double d = requiredThrottle - currentThrottle;
                 if (Math.Abs(d) > throttleResponseRate * deltaT)
