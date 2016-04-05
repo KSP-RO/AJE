@@ -80,6 +80,9 @@ namespace AJE
         [EngineFitData]
         [KSPField(isPersistant = false, guiActive = false)]
         public float wetThrust = 0f;
+        [EngineFitData]
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float idleNPR = 1.1f;
 
         [KSPField(isPersistant = false, guiActive = false)]
         public string spoolEffectName2 = "spool2";
@@ -257,7 +260,7 @@ namespace AJE
         public override void DoEngineFit()
         {
             SolverJet jetEngine = engineSolver as SolverJet;
-            jetEngine.FitEngine(dryThrust * 1000d, drySFC, wetThrust * 1000d, defaultTPR : defaultTPR);
+            jetEngine.FitEngine(dryThrust * 1000d, drySFC, wetThrust * 1000d, idleNPR, defaultTPR : defaultTPR);
 
             Area = (float)jetEngine.GetAref();
             FHV = (float)jetEngine.GetFHV();

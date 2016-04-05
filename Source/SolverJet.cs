@@ -78,7 +78,7 @@ namespace AJE
         protected bool combusting = true;
 
         // Engine fit data
-        protected double dryThrust, drySFC, wetThrust;
+        protected double dryThrust, drySFC, wetThrust, idleNPR;
 
         //---------------------------------------------------------
         //Initialization Functions
@@ -357,7 +357,7 @@ namespace AJE
             CalculateTTR();
         }
 
-        public void FitEngine(double dryThrust, double drySFC, double wetThrust, double defaultTPR = 1d)
+        public void FitEngine(double dryThrust, double drySFC, double wetThrust, double idleNozzlePressureRatio, double defaultTPR = 1d)
         {
             if (CPR == 1d)
                 return;
@@ -384,6 +384,7 @@ namespace AJE
             minThrottle = 0.01f;
             CalculatePerformance(1d, 0f, 1d, 1d);
 
+            idleNPR = idleNozzlePressureRatio;
             if (th7.P > 1.25 * th0.P)
             {
                 minThrottle = 0.01f;
@@ -391,7 +392,7 @@ namespace AJE
             else
             {
                 CalculatePerformance(1d, dryThrottle, 1d, 1d);
-                if (th7.P < 1.25 * th0.P)
+                if (th7.P < idleNPR * th0.P)
                 {
                     Debug.Log("Cannot fit min throttle because jet pipe pressure is too low.  Perhaps TIT is too low or CPR is too high.");
                     minThrottle = 0.01f;
@@ -475,7 +476,7 @@ namespace AJE
         {
             this.minThrottle = minThrottle;
             CalculatePerformance(1d, 0d, 1d, 1d);
-            return th0.P * 1.25 - th7.P;
+            return th0.P * idleNPR - th7.P;
         }
 
         private double WetThrustFittingFunction(double TAB)
