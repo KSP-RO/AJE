@@ -200,6 +200,20 @@ namespace AJE
             part.Effect(powerEffectName2, engineSolver.GetFXPower());
         }
 
+        public override void DeactivatePowerFX()
+        {
+            base.DeactivatePowerFX();
+
+            part.Effect(powerEffectName2, 0f);
+        }
+
+        public override void DeactivateLoopingFX()
+        {
+            base.DeactivateLoopingFX();
+
+            part.Effect(spoolEffectName2, 0f);
+        }
+
         public bool Afterburning => (TAB > 0f);
 
         public float GetEmissiveTemp()
