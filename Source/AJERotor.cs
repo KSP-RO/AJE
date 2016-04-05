@@ -78,7 +78,7 @@ namespace AJE
 
         public override void UpdateThrottle()
         {
-            currentThrottle = requestedThrottle; // instant throttle response
+            currentThrottle = requestedThrottle * thrustPercentage * 0.01f; // instant throttle response
             base.UpdateThrottle();
         }
 
