@@ -19,6 +19,7 @@ To use SolverEngines, implement two classes: a class that derives from EngineSol
 
 Note that SolverEngines uses the [KSPAssembly] tag. Add this line to your AssemblyInfo.cs file to make KSP aware that your assembly depends on SolverEngines:
 [assembly: KSPAssemblyDependency("SolverEngines", 1, 0)]
+(replacing the two numbers with the major and minor version numbers of the SolverEngine release you are compiling against)
 
 SolverEngines will also automatically create overheat bars if engineTemp approaches maxEngineTemp, and will set all ModuleAnimateEmissive modules on the part to solver.GetEmissive() each tick.
 
@@ -27,6 +28,11 @@ SolverEngines includes a GUI to display useful information about engines in flig
 See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
+
+v2.0
+
+* Updated for KSP 1.1
+* Support variable thrust per transform as in ModuleEngines
 
 v1.15
 * Add some math utils
