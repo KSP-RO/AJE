@@ -29,6 +29,9 @@ See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
 
+v2.1
+* Update for KSP 1.1.2
+
 v2.0
 
 * Updated for KSP 1.1
