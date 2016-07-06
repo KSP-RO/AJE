@@ -36,4 +36,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyVersion("2.7.2.0")]
 [assembly: AssemblyFileVersion("2.7.2.0")]
 
-[assembly: KSPAssemblyDependency("SolverEngines", 2, 2)]
+[assembly: KSPAssemblyDependency("SolverEngines", 2, 1)]
