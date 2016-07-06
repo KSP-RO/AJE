@@ -29,6 +29,9 @@ See AJE or RealFuels for examples of how to implement SolverEngines in practice.
 
 Changelog:
 
+V2.3
+* Revert AssemblyVersion to 2.1.0.0 since latest releases of AJE and RF depend on it
+
 v2.2
 * Recompile against KSP 1.1.3
 
