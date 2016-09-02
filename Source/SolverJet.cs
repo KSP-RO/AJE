@@ -129,24 +129,23 @@ namespace AJE
             //calculate TTR at design point first
 
             // Don't overwrite th0 and th1
-            EngineThermodynamics ambientTherm = new EngineThermodynamics();
-            EngineThermodynamics inletTherm = new EngineThermodynamics();
-
-            ambientTherm.FromStandardConditions(false);
+            EngineThermodynamics ambientTherm = EngineThermodynamics.StandardConditions(false);
             ambientTherm.T = T_d;
-            inletTherm.FromChangeReferenceFrameMach(ambientTherm, M_d);
+            EngineThermodynamics inletTherm = ambientTherm.ChangeReferenceFrameMach(M_d);
             // Note that this work is negative
             // Different mass flows between compressor, turbine, and bypass automatically taken care of by MassRatio
-            double compressorWork = th3.FromAdiabaticProcessWithPressureRatio(inletTherm, CPR, efficiency: eta_c);
+            double compressorWork;
+            th3 = inletTherm.AdiabaticProcessWithPressureRatio(CPR, out compressorWork, efficiency: eta_c);
             double fanWork = 0d;
             if (BPR > 0d)
             {
-                fanWork = th2.FromAdiabaticProcessWithPressureRatio(inletTherm, FPR, efficiency: eta_c) * BPR;
+                th2 = inletTherm.AdiabaticProcessWithPressureRatio(FPR, out fanWork, efficiency: eta_c);
+                fanWork *= BPR;
                 fanWorkConstant = fanWork / compressorWork;
             }
             double turbineWork = compressorWork + fanWork;
-            th4.FromAddFuelToTemperature(th3, Tt4, h_f);
-            th5.FromAdiabaticProcessWithWork(th4, turbineWork, efficiency: eta_t);
+            th4 = th3.AddFuelToTemperature(Tt4, h_f);
+            th5 = th4.AdiabaticProcessWithWork(turbineWork, efficiency: eta_t);
             TTR = th5.T / th4.T;
         }
 
@@ -205,13 +204,13 @@ namespace AJE
                 double turbineWork = 0d;
                 for (int i = 0; i < 20; i++)    //use iteration to calculate CPR
                 {
-                    th3.FromAdiabaticProcessWithPressureRatio(th1, prat3, efficiency: eta_c);
+                    th3 = th1.AdiabaticProcessWithPressureRatio(prat3, efficiency: eta_c);
                     // FIXME use ffFraction here? Instead of just multiplying thrust by fuel fraction in the module?
                     // is so, set multiplyThrustByFuelFrac = false in the ModuleEnginesAJEJet.
-                    th4.FromAddFuelToTemperature(th3, Tt4, h_f, throttle: coreThrottle);
-                    turbineWork = th5.FromAdiabaticProcessWithTempRatio(th4, TTR, eta_t);
-                    
-                    th3.FromAdiabaticProcessWithWork(th1, turbineWork / (1d + fanWorkConstant), efficiency: eta_c);
+                    th4 = th3.AddFuelToTemperature(Tt4, h_f, throttle: coreThrottle);
+                    th5 = th4.AdiabaticProcessWithTempRatio(TTR, out turbineWork, eta_t);
+
+                    th3 = th1.AdiabaticProcessWithWork(turbineWork / (1d + fanWorkConstant), efficiency: eta_c);
 
                     double x = prat3;
 
@@ -223,7 +222,7 @@ namespace AJE
 
                 if (BPR > 0d)
                 {
-                    th2.FromAdiabaticProcessWithWork(th1, turbineWork * fanWorkConstant / (1d + fanWorkConstant) / BPR, efficiency: eta_c);
+                    th2 = th1.AdiabaticProcessWithWork(turbineWork * fanWorkConstant / (1d + fanWorkConstant) / BPR, efficiency: eta_c);
                     th2.MassRatio = BPR;
                     prat2 = th2.P / th1.P;
                 }
@@ -231,20 +230,20 @@ namespace AJE
                 if (exhaustMixer && BPR > 0)//exhaust mixer
                 {
                     th2.P *= 0.98;
-                    th6.FromMixStreams(th5, th2);
+                    th6 = EngineThermodynamics.MixStreams(th5, th2);
                 }
                 else
                 {
-                    th6.CopyFrom(th5);
+                    th6 = th5;
                 }
 
                 if (Tt7 > 0)
                 {
-                    th7.FromAddFuelToTemperature(th6, Tt7, h_f, throttle: abThrottle);
+                    th7 = th6.AddFuelToTemperature(Tt7, h_f, throttle: abThrottle);
                 }
                 else
                 {
-                    th7.CopyFrom(th6);
+                    th7 = th6;
                 }
 
                 //Nozzle code is from NASA
