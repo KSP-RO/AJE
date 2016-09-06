@@ -7,6 +7,7 @@ using System.Text;
 using UnityEngine;
 using System.Reflection;
 using SolverEngines;
+using SolverEngines.EngineFitting;
 
 namespace AJE
 {
