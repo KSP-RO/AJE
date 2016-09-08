@@ -12,7 +12,7 @@ using SolverEngines.EngineFitting;
 namespace AJE
 {
 
-    public class ModuleEnginesAJEJet : ModuleEnginesSolver, IModuleInfo, IEngineStatus
+    public class ModuleEnginesAJEJet : ModuleEnginesSolver, IModuleInfo, IEngineStatus, IFittableEngine
     {
         [EngineFitResult]
         [KSPField(isPersistant = false, guiActive = false)]
@@ -269,13 +269,15 @@ namespace AJE
 
         #region Engine Fitting
 
-        public override void PushFitParamsToSolver()
+        public bool CanFitEngine => true;
+
+        public void PushFitParamsToSolver()
         {
             (engineSolver as SolverJet).SetFitParams(Area, FHV, TAB, minThrottle, turbineAreaRatio);
             PushAreaToInlet();
         }
 
-        public override void DoEngineFit()
+        public void DoEngineFit()
         {
             SolverJet jetEngine = engineSolver as SolverJet;
             jetEngine.FitEngine(dryThrust * 1000d, drySFC, wetThrust * 1000d, idleNPR, defaultTPR : defaultTPR);
