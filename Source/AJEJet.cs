@@ -398,11 +398,9 @@ namespace AJE
             CreateEngineIfNecessary();
 
             FitEngineIfNecessary();
-            ambientTherm = new EngineThermodynamics();
-            ambientTherm.FromStandardConditions(true);
-
-            inletTherm = new EngineThermodynamics();
-            inletTherm.CopyFrom(ambientTherm);
+            ambientTherm = EngineThermodynamics.StandardConditions(true);
+            
+            inletTherm = ambientTherm;
             inletTherm.P *= AJEInlet.OverallStaticTPR(defaultTPR);
 
             areaRatio = 1d;

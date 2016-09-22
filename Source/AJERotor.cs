@@ -132,8 +132,7 @@ namespace AJE
                 CreateEngine();
 
             // get stats
-            ambientTherm = new EngineThermodynamics();
-            ambientTherm.FromStandardConditions(true);
+            ambientTherm = EngineThermodynamics.StandardConditions(true);
 
             currentThrottle = 1f;
             lastPropellantFraction = 1d;
