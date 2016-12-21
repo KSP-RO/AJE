@@ -229,5 +229,7 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
-GameData/SolverEngines/Plugins/PluginData/SolverEngines/config.xml
-GameData/SolverEngines/Plugins/PluginData/SolverEngines/EngineDatabse.cfg
+
+# Custom
+GameData/*
+!GameData/AJE
