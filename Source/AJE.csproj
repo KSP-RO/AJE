@@ -55,9 +55,6 @@
     <Reference Include="Assembly-CSharp">
       <Private>False</Private>
     </Reference>
-    <Reference Include="KSPUtil">
-      <Private>False</Private>
-    </Reference>
     <Reference Include="SolverEngines">
       <Private>False</Private>
     </Reference>
