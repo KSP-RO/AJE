@@ -1,9 +1,9 @@
 {
   "NAME"     : "Advanced Jet Engine",
-  "DOWNLOAD" : "https://github.com/camlost2/AJE/releases",
-  "URL"      : "https://raw.githubusercontent.com/camlost2/AJE/solver_redo/GameData/AJE/AJE.version",
+  "DOWNLOAD" : "https://github.com/KSP-RO/AJE/releases",
+  "URL"      : "https://raw.githubusercontent.com/KSP-RO/AJE/solver_redo/GameData/AJE/AJE.version",
   "GITHUB" : {
-    "USERNAME"   : "camlost2",
+    "USERNAME"   : "KSP-RO",
     "REPOSITORY" : "AJE"
   },
   "VERSION" : {
