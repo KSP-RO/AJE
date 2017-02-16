@@ -161,7 +161,7 @@ namespace AJE
             {
                 double requiredThrottle = requestedThrottle * thrustPercentage * 0.01d;
                 double deltaT = TimeWarp.fixedDeltaTime;
-                double throttleResponseRate = Math.Max(2 / Area / (1 + BPR), 5) * throttleResponseMultiplier * 0.01d; //percent per second
+                double throttleResponseRate = Math.Max(1 / (1.28 * Area * (1 + BPR) + 3.22), 0.1) * throttleResponseMultiplier;
 
                 double d = requiredThrottle - currentThrottle;
                 if (Math.Abs(d) > throttleResponseRate * deltaT)
