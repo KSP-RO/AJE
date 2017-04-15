@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
 using UnityEngine;
-using KSP;
 using SolverEngines;
 
 
@@ -167,11 +164,6 @@ namespace AJE
                 combusting = false;
                 statusString = "No fuel";
             }
-            else if (CPR == 1 && M0 < 0.3d)
-            {
-                combusting = false;
-                statusString = "Below ignition speed";
-            }
             else if (airRatio < 0.01d)
             {
                 combusting = false;
@@ -187,14 +179,14 @@ namespace AJE
             {
 
                 // set throttle
-                if (Tt7 == 0)
-                {
-                    mainThrottle = commandedThrottle;
-                }
-                else
+                if (Afterburning)
                 {
                     mainThrottle = Math.Min(commandedThrottle * 1.5d, 1.0);
                     abThrottle = Math.Max(commandedThrottle * 3d - 2d, 0);
+                }
+                else
+                {
+                    mainThrottle = commandedThrottle;
                 }
 
                 double coreThrottle = SolverMathUtil.Lerp(minThrottle, 1d, mainThrottle);
@@ -358,8 +350,6 @@ namespace AJE
 
         public void FitEngine(double dryThrust, double drySFC, double wetThrust, double idleNozzlePressureRatio, double defaultTPR = 1d)
         {
-            if (CPR == 1d)
-                return;
             float TPR = AJEInlet.OverallStaticTPR((float)defaultTPR);
             SetEngineState(true, 1d);
             SetStaticConditions(usePlanetarium: false, overallTPR : TPR);

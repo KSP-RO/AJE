@@ -40,10 +40,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="AJEPropeller.cs" />
+    <Compile Include="AJERamjet.cs" />
     <Compile Include="AJERotor.cs" />
     <Compile Include="AnimationModules\AnimateJetAfterburner.cs" />
     <Compile Include="AnimationModules\AnimateJetExhaustHeat.cs" />
     <Compile Include="AnimationModules\AnimateJetNozzleArea.cs" />
+    <Compile Include="SolverRamjet.cs" />
     <Compile Include="SolverRotor.cs" />
     <Compile Include="SolverJet.cs" />
     <Compile Include="JSBProp.cs" />

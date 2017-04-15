@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using UnityEngine;
-using SolverEngines;
+﻿using SolverEngines;
 
 namespace AJE.AnimationModules
 {
-    public class ModuleAJEJetAnimateAfterburner : ModuleAnimateSolverEngine<ModuleEnginesAJEJet>
+    public interface IJetAfterburner : IEngineStatus
+    {
+        float GetABThrottle();
+    }
+
+    public class ModuleAJEJetAnimateAfterburner : ModuleAnimateSolverEngine<IJetAfterburner>
     {
         public override float TargetAnimationState()
         {

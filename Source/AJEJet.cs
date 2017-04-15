@@ -1,18 +1,12 @@
-﻿using KSP;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
 using UnityEngine;
-using System.Reflection;
 using SolverEngines;
 using SolverEngines.EngineFitting;
 
 namespace AJE
 {
 
-    public class ModuleEnginesAJEJet : ModuleEnginesSolver, IModuleInfo, IEngineStatus, IFittableEngine
+    public class ModuleEnginesAJEJet : ModuleEnginesSolver, IModuleInfo, IEngineStatus, IFittableEngine, AnimationModules.INozzleArea, AnimationModules.IJetAfterburner
     {
         [EngineFitResult]
         [KSPField(isPersistant = false, guiActive = false)]
@@ -104,13 +98,15 @@ namespace AJE
         public float exhaustTemp;
 #endif
 
+        private SolverJet solverJet;
+
         public override void CreateEngine()
         {
             //           bool DREactive = AssemblyLoader.loadedAssemblies.Any(
             //               a => a.assembly.GetName().Name.Equals("DeadlyReentry.dll", StringComparison.InvariantCultureIgnoreCase));
             //         heatProduction = (float)part.maxTemp * 0.1f;
-            engineSolver = new SolverJet();
-            (engineSolver as SolverJet).InitializeOverallEngineData(
+            engineSolver = solverJet = new SolverJet();
+            solverJet.InitializeOverallEngineData(
                 Area,
                 BPR,
                 CPR,
@@ -133,9 +129,6 @@ namespace AJE
             if (autoignitionTemp < 0f || float.IsInfinity(autoignitionTemp))
                 autoignitionTemp = 500f; // Autoignition of Kerosene is 493.15K
 
-            if (CPR == 1f)
-                Fields["prat3"].guiActive = false;
-
             PushAreaToInlet();
 
             // set heat production
@@ -157,30 +150,23 @@ namespace AJE
 
         public override void UpdateThrottle()
         {
-            if (CPR != 1)
-            {
-                double requiredThrottle = requestedThrottle * thrustPercentage * 0.01d;
-                double deltaT = TimeWarp.fixedDeltaTime;
-                double throttleResponseRate = Math.Max(1 / (1.28 * Area * (1 + BPR) + 3.22), 0.1) * throttleResponseMultiplier;
+            double requiredThrottle = requestedThrottle * thrustPercentage * 0.01d;
+            double deltaT = TimeWarp.fixedDeltaTime;
+            double throttleResponseRate = Math.Max(1 / (1.28 * Area * (1 + BPR) + 3.22), 0.1) * throttleResponseMultiplier;
 
-                double d = requiredThrottle - currentThrottle;
-                if (Math.Abs(d) > throttleResponseRate * deltaT)
-                    currentThrottle += Mathf.Sign((float)d) * (float)(throttleResponseRate * deltaT);
-                else
-                    currentThrottle = (float)requiredThrottle;
-            }
-            else // ramjet
-            {
-                currentThrottle = (float)(requestedThrottle * thrustPercentage * 0.01);
-                currentThrottle = Mathf.Max(0.01f, currentThrottle);
-            }
+            double d = requiredThrottle - currentThrottle;
+            if (Math.Abs(d) > throttleResponseRate * deltaT)
+                currentThrottle += Mathf.Sign((float)d) * (float)(throttleResponseRate * deltaT);
+            else
+                currentThrottle = (float)requiredThrottle;
+
             base.UpdateThrottle();
         }
 
         public override void CalculateEngineParams()
         {
             base.CalculateEngineParams();
-            prat3 = (float)(engineSolver as SolverJet).GetPrat3();
+            prat3 = (float)solverJet.GetPrat3();
 
 #if DEBUG
             nozzleArea = GetNozzleArea();
@@ -220,7 +206,7 @@ namespace AJE
         public float GetEmissiveTemp()
         {
             if (isOperational)
-                return (float)(engineSolver as SolverJet).GetExhaustTemp();
+                return (float)solverJet.GetExhaustTemp();
             else
                 return (float)part.temperature;
         }
@@ -228,7 +214,7 @@ namespace AJE
         public float GetNozzleArea()
         {
             if (isOperational)
-                return (float)(engineSolver as SolverJet).GetNozzleArea();
+                return (float)solverJet.GetNozzleArea();
             else
                 return 0f;
         }
@@ -236,7 +222,7 @@ namespace AJE
         public float GetCoreThrottle()
         {
             if (isOperational)
-                return (float)(engineSolver as SolverJet).GetCoreThrottle();
+                return (float)solverJet.GetCoreThrottle();
             else
                 return 0f;
         }
@@ -244,7 +230,7 @@ namespace AJE
         public float GetABThrottle()
         {
             if (isOperational)
-                return (float)(engineSolver as SolverJet).GetABThrottle();
+                return (float)solverJet.GetABThrottle();
             else
                 return 0f;
         }
@@ -255,7 +241,7 @@ namespace AJE
             currentThrottle = FullDryThrottle;
             UpdateSolver(ambientTherm, 0d, Vector3d.zero, 0d, true, true, false);
 
-            return (float)(engineSolver as SolverJet).GetNozzleArea();
+            return (float)solverJet.GetNozzleArea();
         }
 
         public float GetStaticWetNozzleArea()
@@ -264,7 +250,7 @@ namespace AJE
             currentThrottle = 1f;
             UpdateSolver(ambientTherm, 0d, Vector3d.zero, 0d, true, true, false);
 
-            return (float)(engineSolver as SolverJet).GetNozzleArea();
+            return (float)solverJet.GetNozzleArea();
         }
 
         #region Engine Fitting
@@ -273,7 +259,7 @@ namespace AJE
 
         public void PushFitParamsToSolver()
         {
-            (engineSolver as SolverJet).SetFitParams(Area, FHV, TAB, minThrottle, turbineAreaRatio);
+            solverJet.SetFitParams(Area, FHV, TAB, minThrottle, turbineAreaRatio);
             PushAreaToInlet();
         }
 
@@ -314,61 +300,40 @@ namespace AJE
 
             UpdateSolver(ambientTherm, 0d, Vector3d.zero, 0d, true, true, false);
             double thrust = (engineSolver.GetThrust() * 0.001d);
-
-            if (CPR == 1f) // ramjet
+            
+            if (Afterburning)
             {
-                if (primaryField)
-                    output += "<b>Ramjet</b> (no static thrust)\n";
-                if (thrustUpperLimit != double.MaxValue)
-                    output += "<b>Max Rated Thrust:</b> " + thrustUpperLimit.ToString("N2") + " kN\n";
+                output += "<b>Static Thrust (wet): </b>" + thrust.ToString("N2") + " kN";
                 if (!primaryField)
-                    output += "<b>Area:</b> " + Area + "\n";
+                    output += "\n   <b>SFC: </b>" + engineSolver.GetSFC().ToString("N4") + " kg/kgf-h";
+                currentThrottle = 2f / 3f;
+                UpdateSolver(ambientTherm, 0d, Vector3d.zero, 0d, true, true, false);
+                thrust = (engineSolver.GetThrust() * 0.001d);
+                output += "\n<b>Static Thrust (dry): </b>" + thrust.ToString("N2") + " kN";
+                if (!primaryField)
+                    output += "\n   <b>SFC: </b>" + engineSolver.GetSFC().ToString("N4") + " kg/kgf-h\n";
             }
             else
             {
-                if (Afterburning)
-                {
-                    output += "<b>Static Thrust (wet): </b>" + thrust.ToString("N2") + " kN";
-                    if (!primaryField)
-                        output += "\n   <b>SFC: </b>" + engineSolver.GetSFC().ToString("N4") + " kg/kgf-h";
-                    currentThrottle = 2f / 3f;
-                    UpdateSolver(ambientTherm, 0d, Vector3d.zero, 0d, true, true, false);
-                    thrust = (engineSolver.GetThrust() * 0.001d);
-                    output += "\n<b>Static Thrust (dry): </b>" + thrust.ToString("N2") + " kN";
-                    if (!primaryField)
-                        output += "\n   <b>SFC: </b>" + engineSolver.GetSFC().ToString("N4") + " kg/kgf-h\n";
-                }
-                else
-                {
-                    output += "<b>Static Thrust: </b>" + thrust.ToString("N2") + " kN";
-                    if (!primaryField)
-                        output += "\n   <b>SFC: </b>" + engineSolver.GetSFC().ToString("N4") + " kg/kgf-h\n";
-                }
+                output += "<b>Static Thrust: </b>" + thrust.ToString("N2") + " kN";
+                if (!primaryField)
+                    output += "\n   <b>SFC: </b>" + engineSolver.GetSFC().ToString("N4") + " kg/kgf-h\n";
             }
 
-            if (!primaryField && CPR != 1f)
+            if (!primaryField)
             {
                 output += "\n<b>Required Area:</b> " + RequiredIntakeArea().ToString("F3") + " m^2";
                 if (BPR > 0f)
                     output += "\n<b>Bypass Ratio:</b> " + BPR.ToString("F2");
-                output += "\n<b>Compression Ratio (static):</b> " + (engineSolver as SolverJet).GetPrat3().ToString("F1") + "\n";
+                output += "\n<b>Compression Ratio (static):</b> " + solverJet.GetPrat3().ToString("F1") + "\n";
             }
             
             return output;
         }
-        public override string GetModuleTitle()
-        {
-            if (CPR == 1)
-                return "AJE Ramjet";
-            if (BPR > 0)
-                return "AJE Turbofan";
-            return "AJE Turbojet";
-        }
-        public override string GetPrimaryField()
-        {
-            return GetStaticThrustInfo(true);
-        }
 
+        public override string GetModuleTitle() => (BPR > 0) ? "AJE Turbofan" : "AJE Turbojet";
+        public override string GetPrimaryField() => GetStaticThrustInfo(true);
+        
         public override string GetInfo()
         {
             string output = GetStaticThrustInfo(false);
@@ -407,13 +372,7 @@ namespace AJE
             lastPropellantFraction = 1d;
         }
         
-        private float FullDryThrottle
-        {
-            get
-            {
-                return Afterburning ? (2f / 3f) : 1f;
-            }
-        }
+        private float FullDryThrottle => Afterburning ? (2f / 3f) : 1f;
     }
 }
 
