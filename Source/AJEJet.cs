@@ -50,6 +50,8 @@ namespace AJE
         [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public bool adjustableNozzle = true;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public bool unifiedThrottle = false;
         [EngineParameter]
         [KSPField(isPersistant = false, guiActive = false)]
         public float defaultTPR = 1f;
@@ -90,6 +92,12 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = true, guiName = "Compression Ratio", guiFormat = "F1")]
         public float prat3 = 0f;
 
+        [KSPField(isPersistant = false, guiName = "Core Throttle", guiFormat = "N2", guiUnits = "%")]
+        public float actualCoreThrottle;
+
+        [KSPField(isPersistant = false, guiName = "Afterburner Throttle", guiFormat = "N2", guiUnits = "%")]
+        public float actualABThrottle;
+
 #if DEBUG
         [KSPField(guiActive = true, guiName = "Nozzle Area", guiFormat = "F2", guiUnits = "m^2")]
         public float nozzleArea;
@@ -99,6 +107,18 @@ namespace AJE
 #endif
 
         private SolverJet solverJet;
+
+        public override void OnStart(StartState state)
+        {
+            base.OnStart(state);
+
+            if (state != StartState.Editor && Afterburning)
+            {
+                Fields[nameof(actualThrottle)].guiActive = false;
+                Fields[nameof(actualCoreThrottle)].guiActive = true;
+                Fields[nameof(actualABThrottle)].guiActive = true;
+            }
+        }
 
         public override void CreateEngine()
         {
@@ -122,7 +142,8 @@ namespace AJE
                 minThrottle,
                 turbineAreaRatio,
                 exhaustMixer,
-                adjustableNozzle
+                adjustableNozzle,
+                unifiedThrottle
                 );
             useAtmCurve = atmChangeFlow = useVelCurve = useAtmCurveIsp = useVelCurveIsp = false;
             maxEngineTemp = maxT3;
@@ -154,11 +175,65 @@ namespace AJE
             double deltaT = TimeWarp.fixedDeltaTime;
             double throttleResponseRate = Math.Max(1 / (1.28 * Area * (1 + BPR) + 3.22), 0.1) * throttleResponseMultiplier;
 
-            double d = requiredThrottle - currentThrottle;
-            if (Math.Abs(d) > throttleResponseRate * deltaT)
-                currentThrottle += Mathf.Sign((float)d) * (float)(throttleResponseRate * deltaT);
+            // De-multiplex and then re-multiplex main and afterburner throttles
+            float currentMainThrottle, currentABThrottle;
+            double requiredMainThrottle, requiredABThrottle;
+            if (Afterburning)
+            {
+                currentMainThrottle = Mathf.Min(currentThrottle * 1.5f, 1f);
+                currentABThrottle = Mathf.Max(currentThrottle * 3f - 2f, 0f);
+
+                requiredMainThrottle = Math.Min(requiredThrottle * 1.5d, 1d);
+                requiredABThrottle = Math.Max(requiredThrottle * 3d - 2d, 0d);
+            }
             else
-                currentThrottle = (float)requiredThrottle;
+            {
+                currentMainThrottle = currentThrottle;
+                currentABThrottle = unifiedThrottle ? currentThrottle : 0f;
+
+                requiredMainThrottle = requiredThrottle;
+                requiredABThrottle = 0d;
+            }
+
+            double d = requiredMainThrottle - currentMainThrottle;
+            double throttleChange = Math.Min(Math.Abs(d), deltaT * throttleResponseRate) * Math.Sign(d);
+            currentMainThrottle += (float)throttleChange;
+
+
+            if (Afterburning && currentMainThrottle >= 1f && requiredABThrottle > 0d)
+            {
+                if (requiredABThrottle > currentABThrottle)
+                {
+                    double deltaTRemaining = Math.Max(0d, deltaT - (Math.Abs(d) / throttleResponseRate));
+                    double throttleResponseRateAB = throttleResponseRate * 10;
+                    double d2 = requiredABThrottle - currentABThrottle;
+                    double throttleChangeAB = Math.Min(Math.Abs(d2), deltaTRemaining * throttleResponseRateAB) * Math.Sign(d2);
+                    currentABThrottle += (float)throttleChangeAB;
+                }
+                else
+                {
+                    currentABThrottle = (float)requiredABThrottle;
+                }
+            }
+            else if (unifiedThrottle)
+            {
+                currentABThrottle = currentMainThrottle;
+            }
+            else
+            {
+                currentABThrottle = 0f;
+            }
+
+            if (Afterburning)
+            {
+                currentThrottle = (currentMainThrottle * 2f / 3f) + (currentABThrottle / 3f);
+                actualCoreThrottle = currentMainThrottle * 100f;
+                actualABThrottle = currentABThrottle * 100f;
+            }
+            else
+            {
+                currentThrottle = currentMainThrottle;
+            }
 
             base.UpdateThrottle();
         }
@@ -200,8 +275,6 @@ namespace AJE
 
             part.Effect(spoolEffectName2, 0f);
         }
-
-        public bool Afterburning => (TAB > 0f);
 
         public float GetEmissiveTemp()
         {
@@ -252,6 +325,8 @@ namespace AJE
 
             return (float)solverJet.GetNozzleArea();
         }
+
+        public bool Afterburning => (TAB > 0f) && !unifiedThrottle;
 
         #region Engine Fitting
 

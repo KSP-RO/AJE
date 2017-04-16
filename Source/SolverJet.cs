@@ -71,6 +71,9 @@ namespace AJE
         //Whether the nozzle is adjustable to accelerate exhaust to supersonic speed
         private bool adjustableNozzle;
 
+        // Whether ab and core should use same throttle
+        private bool unifiedThrottle;
+
         // engine status
         protected bool combusting = true;
 
@@ -96,7 +99,8 @@ namespace AJE
             double idleThrottle,
             double TAR,
             bool useExhaustMixer,
-            bool supersonicNozzle
+            bool supersonicNozzle,
+            bool sameThrottle
             )
         {
 
@@ -117,6 +121,7 @@ namespace AJE
             turbineAreaRatio = TAR;
             exhaustMixer = useExhaustMixer;
             adjustableNozzle = supersonicNozzle;
+            unifiedThrottle = sameThrottle;
 
             CalculateTTR();
         }
@@ -177,16 +182,23 @@ namespace AJE
 
             if (combusting)
             {
-
-                // set throttle
-                if (Afterburning)
+                if (Tt7 > 0)
                 {
-                    mainThrottle = Math.Min(commandedThrottle * 1.5d, 1.0);
-                    abThrottle = Math.Max(commandedThrottle * 3d - 2d, 0);
+                    if (unifiedThrottle)
+                    {
+                        mainThrottle = commandedThrottle;
+                        abThrottle = commandedThrottle;
+                    }
+                    else
+                    {
+                        mainThrottle = Math.Min(commandedThrottle * 1.5d, 1d);
+                        abThrottle = Math.Max(commandedThrottle * 3d - 2d, 0d);
+                    }
                 }
                 else
                 {
                     mainThrottle = commandedThrottle;
+                    abThrottle = 0d;
                 }
 
                 double coreThrottle = SolverMathUtil.Lerp(minThrottle, 1d, mainThrottle);
