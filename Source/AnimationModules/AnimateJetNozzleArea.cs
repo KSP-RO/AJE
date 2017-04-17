@@ -1,19 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using UnityEngine;
+﻿using UnityEngine;
 using SolverEngines;
 
 namespace AJE.AnimationModules
 {
-    public class ModuleAJEJetAnimateNozzleArea : ModuleAnimateSolverEngine<ModuleEnginesAJEJet>
+    public interface INozzleArea : IEngineStatus
+    {
+        float GetNozzleArea();
+    }
+    
+    public class ModuleAJEJetAnimateNozzleArea : ModuleAnimateSolverEngine<INozzleArea>
     {
         [KSPField]
-        public float minArea = 1f;
+        public float minArea = 0.5f;
 
         [KSPField]
-        public float maxArea = 0.5f;
+        public float maxArea = 1f;
 
         [KSPField]
         public bool calculateAreas = true;
@@ -32,9 +33,6 @@ namespace AJE.AnimationModules
             base.OnStart(state);
 
             HandleCalculateAreas();
-
-            Debug.Log("Min area: " + minArea.ToString());
-            Debug.Log("Max area: " + maxArea.ToString());
         }
 
         public void HandleCalculateAreas()
@@ -46,11 +44,21 @@ namespace AJE.AnimationModules
                 return;
             }
 
-            float minStaticArea = engine.GetStaticDryNozzleArea();
-            float maxStaticArea = engine.GetStaticWetNozzleArea();
+            if (engine is ModuleEnginesAJEJet jetEngine)
+            {
+                float minStaticArea = jetEngine.GetStaticDryNozzleArea();
+                float maxStaticArea = jetEngine.GetStaticWetNozzleArea();
+                minArea = minStaticArea;
+                maxArea = minStaticArea + (maxStaticArea - minStaticArea) * (1f + maxAreaStaticHeadroom);
 
-            minArea = minStaticArea;
-            maxArea = minStaticArea + (maxStaticArea - minStaticArea) * (1f + maxAreaStaticHeadroom);
+                Debug.Log("Min area: " + minArea.ToString());
+                Debug.Log("Max area: " + maxArea.ToString());
+            }
+            else
+            {
+                LogError("Engine is not ModuleEnginesAJEJet, cannot fit area");
+            }
+
         }
 
         public override float TargetAnimationState()
@@ -59,7 +67,7 @@ namespace AJE.AnimationModules
             {
                 return defaultState;
             }
-            else if (engine.GetCoreThrottle() < idleThreshold)
+            else if (engine.normalizedOutput < idleThreshold)
             {
                 return idleState;
             }
