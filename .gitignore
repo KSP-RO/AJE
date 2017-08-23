@@ -234,3 +234,4 @@ $RECYCLE.BIN/
 GameData/*
 !GameData/AJE
 */.vs/*
+*.zip
