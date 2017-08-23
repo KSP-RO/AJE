@@ -233,3 +233,4 @@ $RECYCLE.BIN/
 # Custom
 GameData/*
 !GameData/AJE
+*/.vs/*
