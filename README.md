@@ -4,7 +4,7 @@ AJE
 Advanced Jet Engine for KSP
 
 For docs and readme see the forum thread.
-http://forum.kerbalspaceprogram.com/threads/70008
+https://forum.kerbalspaceprogram.com/index.php?/topic/139868-141-advanced-jet-engine-v2110-march-21/
 
 Includes SolverEngines KSP Plugin
 https://github.com/KSP-RO/SolverEngines
