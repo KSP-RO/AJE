@@ -45,6 +45,7 @@
     <Compile Include="AnimationModules\AnimateJetAfterburner.cs" />
     <Compile Include="AnimationModules\AnimateJetExhaustHeat.cs" />
     <Compile Include="AnimationModules\AnimateJetNozzleArea.cs" />
+    <Compile Include="AJETailrotor.cs" />
     <Compile Include="SolverRamjet.cs" />
     <Compile Include="SolverRotor.cs" />
     <Compile Include="SolverJet.cs" />
@@ -56,20 +57,26 @@
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <Private>False</Private>
+      <HintPath>E:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="SolverEngines">
       <Private>False</Private>
+      <HintPath>E:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\SolverEngines\Plugins\SolverEngines.dll</HintPath>
     </Reference>
     <Reference Include="System">
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine">
       <Private>False</Private>
+      <HintPath>E:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>del "System.Core.dll"</PostBuildEvent>
+    <PostBuildEvent>"E:\Games\pdb2mdb\pdb2mdb.exe" "$(TargetFileName)"
+xcopy /Y "$(TargetPath)" "E:\Games\KSP\GameData\AJE\Plugins\"
+xcopy /Y "$(TargetDir)$(TargetName).pdb" "E:\Games\KSP\GameData\AJE\Plugins\"
+xcopy /Y "$(TargetDir)$(TargetName).dll.mdb" "E:\Games\KSP\GameData\AJE\Plugins\"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
