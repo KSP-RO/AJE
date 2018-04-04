@@ -23,7 +23,7 @@ namespace AJE
         float a; float CL0, AoA0, LDR0, CD0;//AoA, max lift coefficient, AoA of max takeoff
         public float Lift;
         public Vector3 Torque, Drag, Tilt;//in Newton,meter
-
+        private float mach1;
         public SolverRotor(float omega, float r, float weight, float power0, float rho0, float buff, float BSFC, bool useOxygen=true)
         {
             this.omega0 = omega;
@@ -34,7 +34,7 @@ namespace AJE
             this.buff = buff;
             this.BSFC = BSFC;
             this.useOxygen = useOxygen;
-
+            
             AoA0 = 10f;
             CL0 = 6 * 9.80665f * weight / rho0 / omega0 / omega0 / r / r;
             LDR0 = 3f * r * 9.80665f * weight * omega0 / 4f / power0;
@@ -62,15 +62,18 @@ namespace AJE
             }
             return CL0 * y;
         }
-        float DragCoefficient(float a)
+        float DragCoefficient(float a, float v)
         {
             float y = 5e-3f * a * a + 0.5f;
+            v = v / mach1; //convert speed to mach number
+            if (v > 0.8)
+                y += y * (v - 0.8f) * (v - 0.8f) * 50f;
             return CD0 * y;
         }
         Vector3 choppercontrol;
         Vector3 v;//air speed
         float radaraltitude;
-        public void UpdateFlightParams(Vector3 choppercontrol, Vector3 vel,Vector3 forward,Vector3 thrust,float radar)
+        public void UpdateFlightParams(Vector3 choppercontrol, Vector3 vel,Vector3 forward,Vector3 thrust,float radar,float speedofsound)
         {
             this.choppercontrol = choppercontrol;
             float r = choppercontrol.x * choppercontrol.x + choppercontrol.y * choppercontrol.y;
@@ -84,6 +87,7 @@ namespace AJE
             this.f = forward;
             this.t = thrust;
             this.radaraltitude = radar;
+            this.mach1 = speedofsound;
         }
 
         public override void CalculatePerformance(double airRatio, double commandedThrottle, double flowMult, double ispMult)
@@ -118,12 +122,8 @@ namespace AJE
 
                 Vector3 fxt = Vector3.Cross(f, this.t);
                 fxt.Normalize();
-
-                a = AoA0 * choppercontrol.z * 1.2f;//collective
-
-                fxt = Vector3.Cross(f, this.t);
-                fxt.Normalize();
-                Vector3 b = Quaternion.AngleAxis(-2.5f, fxt) * (Quaternion.AngleAxis(90, this.t) * fxt);//parallel to blade,5deg dihedral
+                
+                Vector3 b = Quaternion.AngleAxis(-5f, fxt) * (Quaternion.AngleAxis(90, this.t) * fxt);//parallel to blade,5deg dihedral
 
                 for (int i = 0; i < 24; i++)//each blade
                 {
@@ -133,9 +133,12 @@ namespace AJE
                     Vector3 txbxb = Vector3.Cross(txb, b);
 
                     float vx = Vector3.Dot(wind, txb);//wind speed across the blade
-                                            
-                    Vector3 e = Quaternion.AngleAxis(a, b) * txbxb;
+                    a = AoA0 * choppercontrol.z * 1.2f;//collective
+                    a -= .75f * a * Mathf.Cos(Mathf.PI / 12 * i) * choppercontrol.y;//cyclic done by swash plate
+                    a -= .75f * a * Mathf.Sin(Mathf.PI / 12 * i) * choppercontrol.x;
 
+                    Vector3 e = Quaternion.AngleAxis(a, b) * txbxb;
+                    float areaCoefficient = 1 - vx / (75 + Mathf.Abs(vx)); //a fake flapping hinge + drag hinge
                     float bladeLift = 0f;
                     Vector3 bladeTorque = Vector3.zero;
                     Vector3 bladeDrag = Vector3.zero;
@@ -149,7 +152,7 @@ namespace AJE
                         //air flow through the disc results in AoA increase
                         //float CL = Mathf.Max(CL0 / AoA0 * AoA, 0);
                         float CL = LiftCoefficient(AoA);
-                        float CD = DragCoefficient(AoA);
+                        float CD = DragCoefficient(AoA, flow.magnitude);
 
 
                         Vector3 lift = rho0 / 2 * CL / 288 * Vector3.Dot(flow, flow) * Vector3.Cross(flow, Vector3.Cross(e, flow)).normalized;
@@ -157,7 +160,7 @@ namespace AJE
                         Vector3 force = lift + drag;
                         Vector3 l = Vector3.Dot(force, t) * t;
 
-                        bladeLift += l.magnitude;
+                        bladeLift -= Vector3.Dot(force, t);
                         bladeDrag += (force - l);
                         bladeTorque += Vector3.Cross(b, force) * x;
                         

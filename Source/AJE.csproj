@@ -46,6 +46,7 @@
     <Compile Include="AnimationModules\AnimateJetExhaustHeat.cs" />
     <Compile Include="AnimationModules\AnimateJetNozzleArea.cs" />
     <Compile Include="AJETailrotor.cs" />
+    <Compile Include="PIDController.cs" />
     <Compile Include="SolverRamjet.cs" />
     <Compile Include="SolverRotor.cs" />
     <Compile Include="SolverJet.cs" />
@@ -56,19 +57,17 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <Private>False</Private>
-      <HintPath>E:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>E:\Games\KSP\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="SolverEngines">
-      <Private>False</Private>
-      <HintPath>E:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\SolverEngines\Plugins\SolverEngines.dll</HintPath>
+    <Reference Include="SolverEngines, Version=3.3.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>E:\Games\KSP\GameData\SolverEngines\Plugins\SolverEngines.dll</HintPath>
     </Reference>
     <Reference Include="System">
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine">
-      <Private>False</Private>
-      <HintPath>E:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>E:\Games\KSP\KSP_x64_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
