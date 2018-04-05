@@ -235,3 +235,6 @@ GameData/*
 !GameData/AJE
 */.vs/*
 *.zip
+*.mdb
+GameData/AJE/Plugins/Assembly-CSharp-firstpass.dll
+GameData/AJE/Plugins/Assembly-CSharp.dll

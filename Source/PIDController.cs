@@ -11,19 +11,28 @@ namespace AJE
         float Kp, Ki, Kd;
         float setPoint, actual, dt;
         float error, previousError;
-        float intergral, derivative;
-        float ceiling;
-        public PIDController()
+        float integral, derivative;
+        float[] e;
+        int index, N;
+
+        public PIDController(int N)
         {
             Kp = Ki = Kd = 0;
             this.setPoint = 0;
             this.actual = 0;
             this.dt = 1;
-            this.intergral = 0;
-            this.ceiling = 0;
+            this.integral = 0;
+            this.N = N;
+            e = new float[N];
+            for (int i = 0; i < N; i++)
+            {
+                e[i] = 0;
+            }
+            index = 0;
+            
         }
 
-        public void Update(float kp, float ki, float kd, float setPoint, float actual, float dt, float ceiling)
+        public void Update(float kp, float ki, float kd, float setPoint, float actual, float dt)
         {
             this.Kp = kp;
             this.Ki = ki;
@@ -35,10 +44,21 @@ namespace AJE
         public float getDrive()
         {
             error = setPoint - actual;
-            intergral = Mathf.Clamp(intergral + error * dt, -ceiling, ceiling);
+            //integral = integral + error * dt;
+            enqueue(error * dt);
             derivative = (error - previousError) / dt;
             previousError = error;
-            return error * Kp + intergral * Ki + derivative * Kd;
+            return error * Kp + integral * Ki + derivative * Kd;
+        }
+        void enqueue(float x)
+        {
+            this.integral -= e[index];
+            this.integral += x;
+            e[index] = x;
+            index++;
+            if (index == N)
+                index = 0;
+            
         }
     }
 }
