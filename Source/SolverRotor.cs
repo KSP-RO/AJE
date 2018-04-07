@@ -175,7 +175,7 @@ namespace AJE
                         Vector3 txbxb = Vector3.Cross(txb, b);
 
                         float vx = Vector3.Dot(wind, txb);//wind speed across the blade
-                        a = AoA0 * choppercontrol.z * 1.2f;//collective
+                        a = AoA0 * choppercontrol.z * 1.05f;//collective
                         a += a * Mathf.Sin(Mathf.PI / 12 * i) * choppercontrol.y;//cyclic done by swash plate
                         a -= a * Mathf.Cos(Mathf.PI / 12 * i) * choppercontrol.x;
 

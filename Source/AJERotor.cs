@@ -83,22 +83,22 @@ namespace AJE
             cycEnabled = !cycEnabled;
         }
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Roll Kp", guiFormat = "0.##")
-            , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.01f)]
+            , UI_FloatRange(minValue = 0, maxValue = 3f, stepIncrement = 0.01f)]
         public float rollKp = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Roll Ki", guiFormat = "0.##")
-            , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.01f)]
+            , UI_FloatRange(minValue = 0, maxValue = 3f, stepIncrement = 0.01f)]
         public float rollKi = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Roll Kd", guiFormat = "0.##")
-             , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.01f)]
+             , UI_FloatRange(minValue = 0, maxValue = 3f, stepIncrement = 0.01f)]
         public float rollKd = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Pitch Kp", guiFormat = "0.##")
-            , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.01f)]
+            , UI_FloatRange(minValue = 0, maxValue = 3f, stepIncrement = 0.01f)]
         public float pitchKp = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Pitch Ki", guiFormat = "0.##")
-           , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.01f)]
+           , UI_FloatRange(minValue = 0, maxValue = 3f, stepIncrement = 0.01f)]
         public float pitchKi = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Pitch Kd", guiFormat = "0.##")
-           , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.01f)]
+           , UI_FloatRange(minValue = 0, maxValue = 3f, stepIncrement = 0.01f)]
         public float pitchKd = 0f;
 
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Cyclic Trim to Speed", guiFormat = "0.##")
@@ -221,7 +221,7 @@ namespace AJE
                     if (colDiffPitch)//Chinook
                     {
                         choppercontrol.z += pitchPID.getDrive() / 100 * colDiffPitchCoeff;
-                        choppercontrol.y = 0;
+                        choppercontrol.y = Vector3.Dot(vel, hdg) * cycTrim * 0.01f; 
                     }
                     else
                         choppercontrol.y = pitchPID.getDrive() / 100 + pitchDiffYawCoeff * vessel.ctrlState.yaw;
