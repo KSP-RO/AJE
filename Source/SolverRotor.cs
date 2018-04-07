@@ -21,10 +21,11 @@ namespace AJE
         Vector3 wind;//wind
         public float omega, inertia;//variable angular speed, angular inertia
         float a; float CL0, AoA0, LDR0, CD0;//AoA, max lift coefficient, AoA of max takeoff
-        public float Lift;
-        public Vector3 Torque, Drag, Tilt;//in Newton,meter
-        private float mach1;
-        public SolverRotor(float omega, float r, float weight, float power0, float rho0, float buff, float BSFC, bool useOxygen=true)
+        
+        public Vector3 Force, Torque, Drag, Tilt;//in Newton,meter
+        float mach1;
+        int clockWise;
+        public SolverRotor(float omega, float r, float weight, float power0, float rho0, float buff, float BSFC, bool useOxygen, int clockWise)
         {
             this.omega0 = omega;
             this.r = r;
@@ -34,46 +35,37 @@ namespace AJE
             this.buff = buff;
             this.BSFC = BSFC;
             this.useOxygen = useOxygen;
-            
-            AoA0 = 10f;
+            this.clockWise = clockWise;
+
+            AoA0 = 20f;
             CL0 = 6 * 9.80665f * weight / rho0 / omega0 / omega0 / r / r;
             LDR0 = 3f * r * 9.80665f * weight * omega0 / 4f / power0;
             CD0 = CL0 / LDR0;
-            inertia = weight / 10 / 3 * r * r * r; //assume the rotor is 10% of max take-off weight
-            this.omega = omega0/4;
+            inertia = weight / 15 / 3 * r * r * r; //assume the rotor is 1/15 of max take-off weight
+            this.omega = 1;
         }
+
         float LiftCoefficient(float x)
         {
             float y;
-            if (x < 15)
-            {
-                y = x / 10;
-            }
-            else if (x < 23.38)
-            {
-                float a0 = -4.53879310344824f;
-                float a1 = 0.778448275862065f;
-                float a2 = -0.0249999999999999f;
-                y = a0 + a1 * x + a2 * x * x;
-            }
-            else
-            {
-                y = 0;
-            }
+            y = x / AoA0;
             return CL0 * y;
         }
+
         float DragCoefficient(float a, float v)
         {
-            float y = 5e-3f * a * a + 0.5f;
+            float y = 1.25e-3f * a * a + 0.5f;
             v = v / mach1; //convert speed to mach number
             if (v > 0.8)
                 y += y * (v - 0.8f) * (v - 0.8f) * 50f;
             return CD0 * y;
         }
+
         Vector3 choppercontrol;
         Vector3 v;//air speed
-        float radaraltitude;
-        public void UpdateFlightParams(Vector3 choppercontrol, Vector3 vel,Vector3 forward,Vector3 thrust,float radar,float speedofsound)
+        float radarAltitude, thrustlimiter;
+
+        public void UpdateFlightParams(Vector3 choppercontrol, Vector3 vel,Vector3 forward,Vector3 thrust,float radar,float speedofsound,float thrustlimiter)
         {
             this.choppercontrol = choppercontrol;
             float r = choppercontrol.x * choppercontrol.x + choppercontrol.y * choppercontrol.y;
@@ -83,11 +75,13 @@ namespace AJE
                 choppercontrol.x = choppercontrol.x / r;
                 choppercontrol.y = choppercontrol.y / r;
             }
+            choppercontrol.z = Mathf.Clamp01(choppercontrol.z);
             this.v = vel;
             this.f = forward;
             this.t = thrust;
-            this.radaraltitude = radar;
+            this.radarAltitude = radar;
             this.mach1 = speedofsound;
+            this.thrustlimiter = thrustlimiter;
         }
 
         public override void CalculatePerformance(double airRatio, double commandedThrottle, double flowMult, double ispMult)
@@ -115,67 +109,123 @@ namespace AJE
 
             if (combusting)
             {
-                power = power0 * (float)Math.Min(1d, rho / rho0);
-                Lift = 0;
-                Torque = Drag = Vector3.zero;
+                power = power0 * (float)Math.Min(1d, rho / rho0) * thrustlimiter / 100;
+                
+                Force = Tilt = Torque = Drag = Vector3.zero;
                 wind = -v;
 
                 Vector3 fxt = Vector3.Cross(f, this.t);
                 fxt.Normalize();
                 
-                Vector3 b = Quaternion.AngleAxis(0f, fxt) * (Quaternion.AngleAxis(90, this.t) * fxt);//parallel to blade,5deg dihedral
+                Vector3 b = Quaternion.AngleAxis(-5f, fxt) * (Quaternion.AngleAxis(90, this.t) * fxt);//parallel to blade,5deg dihedral
 
-                for (int i = 0; i < 24; i++)//each blade
+                if (clockWise == -1 || clockWise == 0)
                 {
-
-                    Vector3 txb = Vector3.Cross(this.t, b);
-                    txb.Normalize();
-                    Vector3 txbxb = Vector3.Cross(txb, b);
-
-                    float vx = Vector3.Dot(wind, txb);//wind speed across the blade
-                    a = AoA0 * choppercontrol.z * 1.2f;//collective
-                    a -=  a * Mathf.Cos(Mathf.PI / 12 * i) * choppercontrol.y;//cyclic done by swash plate
-                    a -=  a * Mathf.Sin(Mathf.PI / 12 * i) * choppercontrol.x;
-
-                    Vector3 e = Quaternion.AngleAxis(a, b) * txbxb;
-                    float areaCoefficient = 1 - vx / (75 + Mathf.Abs(vx)); //a fake flapping hinge + drag hinge
-                    float bladeLift = 0f;
-                    Vector3 bladeTorque = Vector3.zero;
-                    Vector3 bladeDrag = Vector3.zero;
-            
-                    for (float j = 0.5f; j < 12; j++)//each segment of a blade
+                    for (int i = 0; i < 24; i++)//each blade
                     {
-                        float x = r / 12 * j;
-                        Vector3 flow = txb * (omega * x);
-                        flow = flow + wind;//air flow = wind + blade element speed           
-                        float AoA = 90 - Vector3.Angle(e, flow);
-                        //air flow through the disc results in AoA increase
-                        //float CL = Mathf.Max(CL0 / AoA0 * AoA, 0);
-                        float CL = LiftCoefficient(AoA);
-                        float CD = DragCoefficient(AoA, flow.magnitude);
+                        Vector3 txb = Vector3.Cross(this.t, b);
+                        txb.Normalize();
+                        Vector3 txbxb = Vector3.Cross(txb, b);
 
+                        float vx = Vector3.Dot(wind, txb);//wind speed across the blade
+                        a = AoA0 * choppercontrol.z * 1.05f;//collective
+                        a -= a * Mathf.Sin(Mathf.PI / 12 * i) * choppercontrol.y;//cyclic done by swash plate
+                        a += a * Mathf.Cos(Mathf.PI / 12 * i) * choppercontrol.x;
 
-                        Vector3 lift = rho0 / 2 * CL / 288 * Vector3.Dot(flow, flow) * Vector3.Cross(flow, Vector3.Cross(e, flow)).normalized;
-                        Vector3 drag = rho0 / 2 * CD / 288 * Vector3.Dot(flow, flow) * flow.normalized;
-                        Vector3 force = lift + drag;
-                        Vector3 l = Vector3.Dot(force, t) * t;
+                        Vector3 e = Quaternion.AngleAxis(a, b) * txbxb;
+                        //float areaCoefficient = 1 - vx / 200; //a fake flapping hinge + drag hinge
 
-                        bladeLift -= Vector3.Dot(force, t);
-                        bladeDrag += (force - l);
-                        bladeTorque += Vector3.Cross(b, force) * x;
+                        Vector3 bladeForce = Vector3.zero;
+                        Vector3 bladeTorque = Vector3.zero;
+
+                        for (float j = 0.5f; j < 12; j++)//each segment of a blade
+                        {
+                            float x = r / 12 * j;
+                            Vector3 flow = txb * (omega * x);
+                            flow = flow + wind;//air flow = wind + blade element speed           
+                            float AoA = 90 - Vector3.Angle(e, flow);
+                            //air flow through the disc results in AoA increase
+                            
+                            float CL = LiftCoefficient(AoA);
+                            float CD = DragCoefficient(AoA, flow.magnitude);
+
+                            Vector3 lift = rho0 / 2 * CL / 288 * Vector3.Dot(flow, flow) * Vector3.Cross(flow, Vector3.Cross(e, flow)).normalized;
+                            Vector3 drag = rho0 / 2 * CD / 288 * Vector3.Dot(flow, flow) * flow.normalized;
+                            Vector3 force = lift + drag;
                         
+                            bladeForce += force;
+                            bladeTorque += Vector3.Cross(b, force) * x;
+                        }
+                        Force += bladeForce;
+                        Torque += bladeTorque;
 
-                    }
-                    Lift += bladeLift;
-                    Torque += bladeTorque;
-                    Drag += bladeDrag;
+                        b = Quaternion.AngleAxis(15, this.t) * b;//rotate blade 15 deg
+                    }//end of blade calculation
+                    Tilt += Quaternion.AngleAxis(-90, t) * Vector3.ProjectOnPlane(Torque, t);// tilt lags 90 degrees because of gyroscopic precession
 
-                    b = Quaternion.AngleAxis(15, this.t) * b;//rotate blade 15 deg
-                }//end of blade calculation
+                }
+                if (clockWise == 0)
+                    shaftpower = Vector3.Dot(Torque, t) * omega;
+                if (clockWise == 1 || clockWise == 0)
+                {
+                    for (int i = 0; i < 24; i++)//each blade
+                    {
+                        Vector3 txb = -Vector3.Cross(this.t, b);
+                        txb.Normalize();
+                        Vector3 txbxb = Vector3.Cross(txb, b);
 
-                Tilt = Vector3.ProjectOnPlane(Torque, t); // tilts the disc
+                        float vx = Vector3.Dot(wind, txb);//wind speed across the blade
+                        a = AoA0 * choppercontrol.z * 1.2f;//collective
+                        a += a * Mathf.Sin(Mathf.PI / 12 * i) * choppercontrol.y;//cyclic done by swash plate
+                        a -= a * Mathf.Cos(Mathf.PI / 12 * i) * choppercontrol.x;
+
+                        Vector3 e = Quaternion.AngleAxis(-a, b) * txbxb;
+                        //float areaCoefficient = 1 - vx / 200; //a fake flapping hinge + drag hinge
+
+                        Vector3 bladeForce = Vector3.zero;
+                        Vector3 bladeTorque = Vector3.zero;
+
+                        for (float j = 0.5f; j < 12; j++)//each segment of a blade
+                        {
+                            float x = r / 12 * j;
+                            Vector3 flow = txb * (omega * x);
+                            flow = flow + wind;//air flow = wind + blade element speed           
+                            float AoA = 90 - Vector3.Angle(e, flow);
+                            //air flow through the disc results in AoA increase
+                            
+                            float CL = LiftCoefficient(AoA);
+                            float CD = DragCoefficient(AoA, flow.magnitude);
+
+                            Vector3 lift = rho0 / 2 * CL / 288 * Vector3.Dot(flow, flow) * Vector3.Cross(flow, Vector3.Cross(e, flow)).normalized;
+                            Vector3 drag = rho0 / 2 * CD / 288 * Vector3.Dot(flow, flow) * flow.normalized;
+                            Vector3 force = lift + drag;
+
+                            bladeForce += force;
+                            bladeTorque += Vector3.Cross(b, force) * x;
+                        }
+                        Force += bladeForce;
+                        Torque += bladeTorque;
+
+                        b = Quaternion.AngleAxis(15, this.t) * b;//rotate blade 15 deg
+                    }//end of blade calculation
+                    Tilt += Quaternion.AngleAxis(90, t) * Vector3.ProjectOnPlane(Torque, t);// tilt lags 90 degrees because of gyroscopic precession
+
+                }
+
+                Force = Quaternion.AngleAxis(Tilt.magnitude / weight, Tilt) * Force; // flapping hinge tilts the disc 
+
+                if (clockWise == 0)
+                {
+                    Force = Force / 2f;
+                    Drag = Drag / 2f;
+                    Tilt = Tilt / 2f;
+                }
+
                 Torque = Vector3.Project(Torque, t); //torque on shaft
-                shaftpower = Torque.magnitude * omega;
+                if (clockWise == 1)
+                    shaftpower = -Vector3.Dot(Torque, t) * omega;
+                if (clockWise == -1)
+                    shaftpower = Vector3.Dot(Torque, t) * omega;
 
 
                 if (omega <= omega0)
@@ -187,26 +237,33 @@ namespace AJE
                     omega = omega0;
                 }
 
-                thrust = Lift * flowMult * ispMult;
+                thrust = -Vector3.Dot(Force,t) * flowMult * ispMult;
+                //effective translational lift
+                float crossWind = Vector3.ProjectOnPlane(v,t).magnitude;
+                if (crossWind > 10)
+                    thrust *= 1.3f;
+                else if (crossWind > 5)
+                    thrust *= 0.3 / 5 * (crossWind - 5) + 1;
+                //happens at 10-20kn
 
                 fuelFlow = BSFC * power * flowMult;
                 fuelFlow *= (omega0 - omega) < 1 ? (Mathf.Clamp01(shaftpower/power)) : 1;
 
-                float groudeffect, radartor;
-                radartor = radaraltitude / r;
-                if (radartor<0.5f)
+                float groundEffect, radarOverR;
+                radarOverR = radarAltitude / r;
+                if (radarOverR<0.5f)
                 {
-                    groudeffect = 0.07f;
-                }else if(radartor<1.5f)
+                    groundEffect = 0.07f;
+                } else if(radarOverR<1.5f)
                 {
-                    groudeffect = 0.07f * (radartor - 1.5f) * (radartor - 1.5f);
+                    groundEffect = 0.07f * (radarOverR - 1.5f) * (radarOverR - 1.5f);
                 } else
                 {
-                    groudeffect = 0;
+                    groundEffect = 0;
                 }
-                if (groudeffect>0)
+                if (groundEffect>0)
                 {
-                    thrust *= 1 + groudeffect;
+                    thrust *= 1 + groundEffect;
                 }
                 Isp = thrust / (fuelFlow * 9.80665d);
                 SFC = 3600d / Isp;

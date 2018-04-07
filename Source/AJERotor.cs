@@ -13,67 +13,96 @@ namespace AJE
 
         #region Loadable Fields
 
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField]
         public bool useOxygen = true;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField]
         public float IspMultiplier = 1f;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField]
         public float idle = 0f;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField]
         public float rpm;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField]
         public float r;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField]
         public float weight;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField]
         public float power;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField]
         public float BSFC;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField]
         public float VTOLbuff = -1f;
-        [KSPField(isPersistant = false, guiActive = false)]
+        [KSPField]
         public float maxSwashPlateAngle = 20f;
+        [KSPField]
+        public int clockWise = -1;
         #endregion
         #region Control/Display fields
 
         [KSPField]
         public bool yaw = false;
         [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false, guiName = "Yaw Coeff.", guiFormat = "0.##")
-            , UI_FloatRange(minValue = -10f, maxValue = 10f, stepIncrement = 0.01f)]
+            , UI_FloatRange(minValue = -1f, maxValue = 1f, stepIncrement = 0.1f)]
         public float yawCoeff = 0f;
         [KSPField]
-        public bool colDiffPitch = false;
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false, guiName = "Collective Diff. Pitch Coeff.", guiFormat = "0.##")
-            , UI_FloatRange(minValue = -10f, maxValue = 10f, stepIncrement = 0.01f)]
+        public bool colDiffPitch = false;//for Chinook
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false, guiName = "Pitch ctrl by Collective Diff.", guiFormat = "0.##")
+            , UI_FloatRange(minValue = -1f, maxValue = 1f, stepIncrement = 0.05f)]
         public float colDiffPitchCoeff = 0f;
         [KSPField]
-        public bool cycDiffYaw = false;
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false, guiName = "Cyclic Diff. Coeff.", guiFormat = "0.##")
-            , UI_FloatRange(minValue = -10f, maxValue = 10f, stepIncrement = 0.01f)]
-        public float cycDiffYawCoeff = 0f;
+        public bool rollDiffYaw = false;//for Chinook
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false, guiName = "Yaw ctrl by Roll Diff.", guiFormat = "0.##")
+            , UI_FloatRange(minValue = -1f, maxValue = 1f, stepIncrement = 0.05f)]
+        public float rollDiffYawCoeff = 0f;      
+        [KSPField]
+        public bool colDiffRoll = false;//for Osprey
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false, guiName = "Roll ctrl by Collective Diff.", guiFormat = "0.##")
+            , UI_FloatRange(affectSymCounterparts = UI_Scene.None, minValue = -1f, maxValue = 1f, stepIncrement = 0.05f)]
+        public float colDiffRollCoeff = 0f;
+        [KSPField]
+        public bool pitchDiffYaw = false;//for Osprey
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false, guiName = "Yaw ctrl by Pitch Diff.", guiFormat = "0.##")
+            , UI_FloatRange(affectSymCounterparts = UI_Scene.None, minValue = -1f, maxValue = 1f, stepIncrement = 0.05f)]
+        public float pitchDiffYawCoeff = 0f;
 
+        [KSPField]
+        public bool reversible = false;
+        [KSPField(guiActive = false, guiActiveEditor = false, guiName = "Reverse Rotation", isPersistant = true)
+            , UI_Toggle(affectSymCounterparts = UI_Scene.None, scene = UI_Scene.Editor)]
+        public bool reverseRotation = false;
 
+        [KSPField(guiActive = true, guiActiveEditor = true, guiName = "Cyclic Control", isPersistant = true)
+            , UI_Toggle(affectSymCounterparts = UI_Scene.All, scene = UI_Scene.All)]
+        public bool cycEnabled = true;
+        [KSPAction("Toggle Cyclic Control")]
+        public void toggleCyclicAction(KSPActionParam param)
+        {
+            toggleCyclic();
+        }
+        public void toggleCyclic()
+        {
+            cycEnabled = !cycEnabled;
+        }
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Roll Kp", guiFormat = "0.##")
-            , UI_FloatRange(minValue = 0f, maxValue = 2f, stepIncrement = 0.01f)]
+            , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.01f)]
         public float rollKp = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Roll Ki", guiFormat = "0.##")
-            , UI_FloatRange(minValue = 0f, maxValue = 2f, stepIncrement = 0.01f)]
+            , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.01f)]
         public float rollKi = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Roll Kd", guiFormat = "0.##")
-             , UI_FloatRange(minValue = 0f, maxValue = 2f, stepIncrement = 0.01f)]
+             , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.01f)]
         public float rollKd = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Pitch Kp", guiFormat = "0.##")
-            , UI_FloatRange(minValue = 0f, maxValue = 2f, stepIncrement = 0.01f)]
+            , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.01f)]
         public float pitchKp = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Pitch Ki", guiFormat = "0.##")
-           , UI_FloatRange(minValue = 0f, maxValue = 2f, stepIncrement = 0.01f)]
+           , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.01f)]
         public float pitchKi = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Pitch Kd", guiFormat = "0.##")
-           , UI_FloatRange(minValue = 0f, maxValue = 2f, stepIncrement = 0.01f)]
+           , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.01f)]
         public float pitchKd = 0f;
 
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Cyclic Trim to Speed", guiFormat = "0.##")
-         , UI_FloatRange(minValue = -1f, maxValue = 1f, stepIncrement = 0.01f)]
+         , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.1f)]
         public float cycTrim = 0f;
 
         #endregion
@@ -97,6 +126,16 @@ namespace AJE
 
         PIDController rollPID, pitchPID;
 
+        public void SetFields()
+        {
+            Fields["yawCoeff"].guiActive = Fields["yawCoeff"].guiActiveEditor = yaw;
+            Fields["colDiffPitchCoeff"].guiActive = Fields["colDiffPitchCoeff"].guiActiveEditor = colDiffPitch;
+            Fields["rollDiffYawCoeff"].guiActive = Fields["rollDiffYawCoeff"].guiActiveEditor = rollDiffYaw;
+            Fields["colDiffRollCoeff"].guiActive = Fields["colDiffRollCoeff"].guiActiveEditor = colDiffRoll;
+            Fields["pitchDiffYawCoeff"].guiActive = Fields["pitchDiffYawCoeff"].guiActiveEditor = pitchDiffYaw;
+            Fields["reverseRotation"].guiActive = Fields["reverseRotation"].guiActiveEditor = reversible;
+
+        }
         public override void CreateEngine()
         {
             if (maxEngineTemp == 0d)
@@ -104,7 +143,7 @@ namespace AJE
 
             float omega = rpm * 0.1047f;
 
-            engineSolver = new SolverRotor(omega, r, weight, power * 745.7f, 1.2f, VTOLbuff, BSFC, useOxygen);
+            engineSolver = new SolverRotor(omega, r, weight, power * 745.7f, 1.2f, VTOLbuff, BSFC, useOxygen, reverseRotation ? -clockWise : clockWise);
 
 
             useAtmCurve = atmChangeFlow = useVelCurve = useAtmCurveIsp = useVelCurveIsp = false;
@@ -125,6 +164,11 @@ namespace AJE
 
         #region Update Methods
 
+        public override void OnStart(StartState state)
+        {
+            base.OnStart(state);
+            SetFields();
+        }
         public override void UpdateThrottle()
         {
             currentThrottle = requestedThrottle * thrustPercentage * 0.01f; // instant throttle response
@@ -149,21 +193,47 @@ namespace AJE
                 hdg = vessel.ReferenceTransform.up;
                 rgt = vessel.ReferenceTransform.right;
                 dwn = vessel.ReferenceTransform.forward;
-                choppercontrol.x = vessel.ctrlState.roll * (1 - cycDiffYawCoeff * 0.01f * vessel.ctrlState.yaw);
-                choppercontrol.x += Vector3.Dot(vel, hdg) * cycTrim / 100f;
-                choppercontrol.y = vessel.ctrlState.pitch;
-                choppercontrol.z = vessel.ctrlState.mainThrottle * this.thrustPercentage / 100f * (1 - colDiffPitchCoeff * 0.01f * vessel.ctrlState.pitch);
-                radar = (float)vessel.radarAltitude;
-                //thrustTransforms[0].forward = Quaternion.AngleAxis(-choppercontrol.x * maxSwashPlateAngle, hdg) * thrustTransformVectorDefault;
-                //thrustTransforms[0].forward = Quaternion.AngleAxis(choppercontrol.y * maxSwashPlateAngle, rgt) * thrustTransforms[0].forward;
+                radar = (float)vessel.radarAltitude + Vector3.Dot(vessel.upAxis, thrustTransforms[0].position - vessel.transform.position);
+                if (cycEnabled)
+                {
+                    choppercontrol.x = vessel.ctrlState.roll; 
+                    choppercontrol.y = vessel.ctrlState.pitch;
+                    choppercontrol.y -= Vector3.Dot(vel, hdg) * cycTrim * 0.01f;
+                    choppercontrol.z = vessel.ctrlState.mainThrottle;// -  * vessel.ctrlState.pitch - colDiffRollCoeff * vessel.ctrlState.roll;
+                    
+                    //thrustTransforms[0].forward = Quaternion.AngleAxis(-choppercontrol.x * maxSwashPlateAngle, hdg) * thrustTransformVectorDefault;
+                    //thrustTransforms[0].forward = Quaternion.AngleAxis(choppercontrol.y * maxSwashPlateAngle, rgt) * thrustTransforms[0].forward;
 
-                float rollangle = (float)Vector3d.Angle(rgt, vessel.upAxis) - 90f;
-                float pitchangle = 90f - (float)Vector3d.Angle(hdg, vessel.upAxis);
+                    float rollangle = (float)Vector3d.Angle(rgt, vessel.upAxis) - 90f;
+                    float pitchangle = 90f - (float)Vector3d.Angle(hdg, vessel.upAxis);
+                    
+                    rollPID.Update(-rollKp, -rollKi, -rollKd, choppercontrol.x * 60, rollangle, Time.deltaTime);
+                    pitchPID.Update(-pitchKp, -pitchKi, -pitchKd, choppercontrol.y * 60, pitchangle, Time.deltaTime);
 
-                rollPID.Update(rollKp, rollKi, rollKd, choppercontrol.x*45, rollangle, Time.deltaTime);
-                pitchPID.Update(pitchKp, pitchKi, pitchKd, choppercontrol.y*45, pitchangle, Time.deltaTime);
-                choppercontrol.x = rollPID.getDrive() / 100 ;
-                choppercontrol.y = pitchPID.getDrive() / 100 ;
+                    if (colDiffRoll)//Osprey
+                    {
+                        choppercontrol.z += rollPID.getDrive() / 100 * colDiffRollCoeff;
+                        choppercontrol.x = 0;
+                    }
+                    else
+                        choppercontrol.x = rollPID.getDrive() / 100 + rollDiffYawCoeff * vessel.ctrlState.yaw;
+
+                    if (colDiffPitch)//Chinook
+                    {
+                        choppercontrol.z += pitchPID.getDrive() / 100 * colDiffPitchCoeff;
+                        choppercontrol.y = 0;
+                    }
+                    else
+                        choppercontrol.y = pitchPID.getDrive() / 100 + pitchDiffYawCoeff * vessel.ctrlState.yaw;
+
+                    
+
+                }
+                else
+                {
+                    choppercontrol.x = choppercontrol.y = 0;
+                    choppercontrol.z = vessel.ctrlState.mainThrottle;
+                }
             }
             else
             {
@@ -171,7 +241,7 @@ namespace AJE
             }
 
             Vector3 t = thrustTransforms[0].forward.normalized;
-            (engineSolver as SolverRotor).UpdateFlightParams(choppercontrol, vel, hdg, t, radar, (float)ambientTherm.SpeedOfSound(1));
+            (engineSolver as SolverRotor).UpdateFlightParams(choppercontrol, vel, hdg, t, radar, (float)ambientTherm.SpeedOfSound(1), this.thrustPercentage);
 
             base.UpdateSolver(ambientTherm, altitude, vel, mach, ignited, oxygen, underwater);
         }
@@ -182,9 +252,24 @@ namespace AJE
 
             ShaftPower = (float)(engineSolver as SolverRotor).GetPower() / 745.7f;
             RPM = (engineSolver as SolverRotor).omega / 0.1047f;
-            part.Rigidbody.AddForce((engineSolver as SolverRotor).Drag * 0.001f);
-            part.Rigidbody.AddTorque((engineSolver as SolverRotor).Torque * yawCoeff * -0.01f * vessel.ctrlState.yaw);
-            part.Rigidbody.AddTorque((engineSolver as SolverRotor).Tilt * -0.001f);
+
+            Vector3 F = (engineSolver as SolverRotor).Force;
+            part.Rigidbody.AddForce(Vector3.ProjectOnPlane(F, thrustTransforms[0].forward.normalized) * 0.001f);
+            part.Rigidbody.AddTorque((engineSolver as SolverRotor).Tilt * 0.001f);
+            if (clockWise == 0)
+            {
+                part.Rigidbody.AddTorque(thrustTransforms[0].forward.normalized * (engineSolver as SolverRotor).shaftpower / (engineSolver as SolverRotor).omega * yawCoeff * -0.05f * vessel.ctrlState.yaw);
+            }
+            else
+            {
+                part.Rigidbody.AddTorque((engineSolver as SolverRotor).Torque * yawCoeff * -0.05f * vessel.ctrlState.yaw);
+            }
+           /* Vector3 L = (float)(engineSolver as SolverRotor).thrust * thrustTransforms[0].forward.normalized;
+
+            if(pitchDiffYaw)
+                part.Rigidbody.AddForce(hdg * Vector3.Project(L, dwn).magnitude * 1.74524E-5f * pitchDiffYawCoeff * vessel.ctrlState.yaw);
+            if(rollDiffYaw)
+                part.Rigidbody.AddForce(rgt * Vector3.Project(L, dwn).magnitude * 1.74524E-5f * rollDiffYawCoeff * vessel.ctrlState.yaw); */
         }
 
         #endregion
