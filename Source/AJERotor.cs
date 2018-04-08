@@ -30,7 +30,7 @@ namespace AJE
         [KSPField]
         public float BSFC;
         [KSPField]
-        public float VTOLbuff = -1f;
+        public float VTOLbuff = 1f;
         [KSPField]
         public float maxSwashPlateAngle = 20f;
         [KSPField]
@@ -83,26 +83,26 @@ namespace AJE
             cycEnabled = !cycEnabled;
         }
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Roll Kp", guiFormat = "0.##")
-            , UI_FloatRange(minValue = 0, maxValue = 3f, stepIncrement = 0.01f)]
+            , UI_FloatRange(minValue = 0, maxValue = 2.5f, stepIncrement = 0.05f)]
         public float rollKp = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Roll Ki", guiFormat = "0.##")
-            , UI_FloatRange(minValue = 0, maxValue = 3f, stepIncrement = 0.01f)]
+            , UI_FloatRange(minValue = 0, maxValue = 2.5f, stepIncrement = 0.05f)]
         public float rollKi = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Roll Kd", guiFormat = "0.##")
-             , UI_FloatRange(minValue = 0, maxValue = 3f, stepIncrement = 0.01f)]
+             , UI_FloatRange(minValue = 0, maxValue = 2.5f, stepIncrement = 0.05f)]
         public float rollKd = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Pitch Kp", guiFormat = "0.##")
-            , UI_FloatRange(minValue = 0, maxValue = 3f, stepIncrement = 0.01f)]
+            , UI_FloatRange(minValue = 0, maxValue = 2.5f, stepIncrement = 0.05f)]
         public float pitchKp = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Pitch Ki", guiFormat = "0.##")
-           , UI_FloatRange(minValue = 0, maxValue = 3f, stepIncrement = 0.01f)]
+           , UI_FloatRange(minValue = 0, maxValue = 2.5f, stepIncrement = 0.05f)]
         public float pitchKi = 0f;
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Pitch Kd", guiFormat = "0.##")
-           , UI_FloatRange(minValue = 0, maxValue = 3f, stepIncrement = 0.01f)]
+           , UI_FloatRange(minValue = 0, maxValue = 2.5f, stepIncrement = 0.05f)]
         public float pitchKd = 0f;
 
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Cyclic Trim to Speed", guiFormat = "0.##")
-         , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.1f)]
+         , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.05f)]
         public float cycTrim = 0f;
 
         #endregion
@@ -214,19 +214,21 @@ namespace AJE
                     {
                         choppercontrol.z += rollPID.getDrive() / 100 * colDiffRollCoeff;
                         choppercontrol.x = 0;
+                        choppercontrol.y = pitchPID.getDrive() / 100 + pitchDiffYawCoeff * vessel.ctrlState.yaw;
                     }
-                    else
-                        choppercontrol.x = rollPID.getDrive() / 100 + rollDiffYawCoeff * vessel.ctrlState.yaw;
-
-                    if (colDiffPitch)//Chinook
+                    else if (colDiffPitch)//Chinook
                     {
                         choppercontrol.z += pitchPID.getDrive() / 100 * colDiffPitchCoeff;
-                        choppercontrol.y = Vector3.Dot(vel, hdg) * cycTrim * 0.01f; 
+                        choppercontrol.y = Vector3.Dot(vel, hdg) * cycTrim * 0.01f;
+                        choppercontrol.x = rollPID.getDrive() / 100 + rollDiffYawCoeff * vessel.ctrlState.yaw;
                     }
                     else
+                    {
                         choppercontrol.y = pitchPID.getDrive() / 100 + pitchDiffYawCoeff * vessel.ctrlState.yaw;
+                        choppercontrol.x = rollPID.getDrive() / 100 + rollDiffYawCoeff * vessel.ctrlState.yaw;
+                    }
 
-                    
+
 
                 }
                 else
@@ -239,7 +241,7 @@ namespace AJE
             {
                 hdg.Set(0, 1, 0);
             }
-
+            
             Vector3 t = thrustTransforms[0].forward.normalized;
             (engineSolver as SolverRotor).UpdateFlightParams(choppercontrol, vel, hdg, t, radar, (float)ambientTherm.SpeedOfSound(1), this.thrustPercentage);
 
@@ -253,9 +255,11 @@ namespace AJE
             ShaftPower = (float)(engineSolver as SolverRotor).GetPower() / 745.7f;
             RPM = (engineSolver as SolverRotor).omega / 0.1047f;
 
-            Vector3 F = (engineSolver as SolverRotor).Force;
-            part.Rigidbody.AddForce(Vector3.ProjectOnPlane(F, thrustTransforms[0].forward.normalized) * 0.001f);
+            Vector3 F = Vector3.ProjectOnPlane((engineSolver as SolverRotor).Force, thrustTransforms[0].forward.normalized);
+            part.Rigidbody.AddForce(F * 0.001f);
+  //          part.Rigidbody.AddTorque(Vector3.Cross(thrustTransforms[0].transform.position - part.Rigidbody.position, F) * 0.001f);
             part.Rigidbody.AddTorque((engineSolver as SolverRotor).Tilt * 0.001f);
+
             if (clockWise == 0)
             {
                 part.Rigidbody.AddTorque(thrustTransforms[0].forward.normalized * (engineSolver as SolverRotor).shaftpower / (engineSolver as SolverRotor).omega * yawCoeff * -0.05f * vessel.ctrlState.yaw);

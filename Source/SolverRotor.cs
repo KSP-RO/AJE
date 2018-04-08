@@ -48,7 +48,13 @@ namespace AJE
         float LiftCoefficient(float x)
         {
             float y;
-            y = x / AoA0;
+            x = x / AoA0;
+           // if (x < 1)
+                y = x;
+         //   else if (x < 1.5)
+         //       y = 1 - 4 * (x - 1) * (x - 1);
+         //   else
+         //       y = 0;
             return CL0 * y;
         }
 
@@ -119,6 +125,7 @@ namespace AJE
                 
                 Vector3 b = Quaternion.AngleAxis(-5f, fxt) * (Quaternion.AngleAxis(90, this.t) * fxt);//parallel to blade,5deg dihedral
 
+            
                 if (clockWise == -1 || clockWise == 0)
                 {
                     for (int i = 0; i < 24; i++)//each blade
@@ -127,10 +134,14 @@ namespace AJE
                         txb.Normalize();
                         Vector3 txbxb = Vector3.Cross(txb, b);
 
-                        float vx = Vector3.Dot(wind, txb);//wind speed across the blade
-                        a = AoA0 * choppercontrol.z * 1.05f;//collective
-                        a -= a * Mathf.Sin(Mathf.PI / 12 * i) * choppercontrol.y;//cyclic done by swash plate
-                        a += a * Mathf.Cos(Mathf.PI / 12 * i) * choppercontrol.x;
+                        float vz = Vector3.Dot(wind, t);//wind speed across the disc
+                        a = AoA0 * choppercontrol.z;//collective
+                        if (vz > 0 && buff > 1)
+                        {
+                            a *= 1 + (buff - 1) / 100 * vz;
+                        }
+                        a -= AoA0 * choppercontrol.z * Mathf.Sin(Mathf.PI / 12 * i) * choppercontrol.y;//cyclic done by swash plate
+                        a += AoA0 * choppercontrol.z * Mathf.Cos(Mathf.PI / 12 * i) * choppercontrol.x;
 
                         Vector3 e = Quaternion.AngleAxis(a, b) * txbxb;
                         //float areaCoefficient = 1 - vx / 200; //a fake flapping hinge + drag hinge
@@ -174,10 +185,14 @@ namespace AJE
                         txb.Normalize();
                         Vector3 txbxb = Vector3.Cross(txb, b);
 
-                        float vx = Vector3.Dot(wind, txb);//wind speed across the blade
-                        a = AoA0 * choppercontrol.z * 1.05f;//collective
-                        a += a * Mathf.Sin(Mathf.PI / 12 * i) * choppercontrol.y;//cyclic done by swash plate
-                        a -= a * Mathf.Cos(Mathf.PI / 12 * i) * choppercontrol.x;
+                        float vz = Vector3.Dot(wind, t);//wind speed across the disc
+                        a = AoA0 * choppercontrol.z;//collective
+                        if (vz > 0 && buff > 1)
+                        {
+                            a *= 1 + (buff - 1) / 100 * vz;
+                        }
+                        a += AoA0 * choppercontrol.z * Mathf.Sin(Mathf.PI / 12 * i) * choppercontrol.y;//cyclic done by swash plate
+                        a -= AoA0 * choppercontrol.z * Mathf.Cos(Mathf.PI / 12 * i) * choppercontrol.x;
 
                         Vector3 e = Quaternion.AngleAxis(-a, b) * txbxb;
                         //float areaCoefficient = 1 - vx / 200; //a fake flapping hinge + drag hinge
