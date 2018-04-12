@@ -12,7 +12,7 @@ namespace AJE
         private float omega0, r, weight, power0, rho0;//0 stands for max-takeoff condition
         private float buff, BSFC;
         
-        public float power, shaftpower;
+        public float power, shaftpower, outputpower;
 
         private bool useOxygen = true;
 
@@ -25,6 +25,7 @@ namespace AJE
         public Vector3 Force, Torque, Drag, Tilt;//in Newton,meter
         float mach1;
         int clockWise;
+        SmoothInput smoothinputX, smoothinputY, smoothinputZ, smoothinputP;
         public SolverRotor(float omega, float r, float weight, float power0, float rho0, float buff, float BSFC, bool useOxygen, int clockWise)
         {
             this.omega0 = omega;
@@ -43,6 +44,13 @@ namespace AJE
             CD0 = CL0 / LDR0;
             inertia = weight / 15 / 3 * r * r * r; //assume the rotor is 1/15 of max take-off weight
             this.omega = 1;
+            this.power = 0;
+
+            float tau = 30 / omega0;
+            smoothinputX = new SmoothInput(tau/2);
+            smoothinputY = new SmoothInput(tau/2);
+            smoothinputZ = new SmoothInput(tau);
+            smoothinputP = new SmoothInput(1e-6f);
         }
 
         float LiftCoefficient(float x)
@@ -71,9 +79,13 @@ namespace AJE
         Vector3 v;//air speed
         float radarAltitude, thrustlimiter;
 
-        public void UpdateFlightParams(Vector3 choppercontrol, Vector3 vel,Vector3 forward,Vector3 thrust,float radar,float speedofsound,float thrustlimiter)
+        public void UpdateFlightParams(Vector3 controlInput, Vector3 vel,Vector3 forward,Vector3 thrust,float radar,float speedofsound,float thrustlimiter)
         {
-            this.choppercontrol = choppercontrol;
+            this.choppercontrol = controlInput;
+            choppercontrol.x = smoothinputX.Smooth(choppercontrol.x);
+            choppercontrol.y = smoothinputY.Smooth(choppercontrol.y);
+            choppercontrol.z = smoothinputZ.Smooth(choppercontrol.z);
+
             float r = choppercontrol.x * choppercontrol.x + choppercontrol.y * choppercontrol.y;
             if (r > 1)
             {
@@ -112,10 +124,9 @@ namespace AJE
                 combusting = false;
                 statusString = "Underwater";
             }
-
             if (combusting)
             {
-                power = power0 * (float)Math.Min(1d, rho / rho0) * thrustlimiter / 100;
+                power = smoothinputP.Smooth(power0 * (float)Math.Min(1d, rho / rho0) * thrustlimiter / 100);
                 
                 Force = Tilt = Torque = Drag = Vector3.zero;
                 wind = -v;
@@ -249,7 +260,7 @@ namespace AJE
                 }
                 else
                 {
-                    omega = omega0;
+                    omega = omega0;                    
                 }
 
                 thrust = -Vector3.Dot(Force,t) * flowMult * ispMult;
@@ -262,8 +273,13 @@ namespace AJE
                 //happens at 10-20kn
 
                 fuelFlow = BSFC * power * flowMult;
-                fuelFlow *= (omega0 - omega) < 1 ? (Mathf.Clamp01(shaftpower/power)) : 1;
+                if ((omega0 - omega) < 1)
+                {
+                    fuelFlow *= Mathf.Clamp01(shaftpower / power);
+                }
 
+                outputpower = Mathf.Min(shaftpower, power);
+                               
                 float groundEffect, radarOverR;
                 radarOverR = radarAltitude / r;
                 if (radarOverR<0.5f)
@@ -284,6 +300,7 @@ namespace AJE
                 SFC = 3600d / Isp;
 
             }
+      
         }
 
         public double GetPower()

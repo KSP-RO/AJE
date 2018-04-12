@@ -19,13 +19,13 @@ namespace AJE
         public float IspMultiplier = 1f;
         [KSPField]
         public float idle = 0f;
-        [KSPField]
+        [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Rotor RPM")]
         public float rpm;
-        [KSPField]
+        [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Radius (m)")]
         public float r;
-        [KSPField]
+        [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Max take-off weight (kg)")]
         public float weight;
-        [KSPField]
+        [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Max Power (HP)")]
         public float power;
         [KSPField]
         public float BSFC;
@@ -70,17 +70,18 @@ namespace AJE
             , UI_Toggle(affectSymCounterparts = UI_Scene.None, scene = UI_Scene.Editor)]
         public bool reverseRotation = false;
 
-        [KSPField(guiActive = true, guiActiveEditor = true, guiName = "Cyclic Control", isPersistant = true)
-            , UI_Toggle(affectSymCounterparts = UI_Scene.All, scene = UI_Scene.All)]
-        public bool cycEnabled = true;
-        [KSPAction("Toggle Cyclic Control")]
-        public void toggleCyclicAction(KSPActionParam param)
+        [KSPField(guiActive = true, guiActiveEditor = true, guiName = "Cyclic Control Authority", isPersistant = true)
+            , UI_FloatRange(affectSymCounterparts = UI_Scene.All, scene = UI_Scene.All, minValue = 0f, maxValue = 1f, stepIncrement = 0.01f)]
+        public float cycAuth = 1f;
+        [KSPAction("Increase Cyclic Control")]
+        public void increaseCyclicAction(KSPActionParam param)
         {
-            toggleCyclic();
+            cycAuth = Mathf.Clamp01(cycAuth + 0.1f);
         }
-        public void toggleCyclic()
+        [KSPAction("Decrease Cyclic Control")]
+        public void decreaseCyclicAction(KSPActionParam param)
         {
-            cycEnabled = !cycEnabled;
+            cycAuth = Mathf.Clamp01(cycAuth - 0.1f);
         }
         [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Roll Kp", guiFormat = "0.##")
             , UI_FloatRange(minValue = 0, maxValue = 2.5f, stepIncrement = 0.05f)]
@@ -101,7 +102,7 @@ namespace AJE
            , UI_FloatRange(minValue = 0, maxValue = 2.5f, stepIncrement = 0.05f)]
         public float pitchKd = 0f;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Cyclic Trim to Speed", guiFormat = "0.##")
+        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Trim Cyclic against Speed", guiFormat = "0.##")
          , UI_FloatRange(minValue = -2f, maxValue = 2f, stepIncrement = 0.05f)]
         public float cycTrim = 0f;
 
@@ -194,40 +195,44 @@ namespace AJE
                 rgt = vessel.ReferenceTransform.right;
                 dwn = vessel.ReferenceTransform.forward;
                 radar = (float)vessel.radarAltitude + Vector3.Dot(vessel.upAxis, thrustTransforms[0].position - vessel.transform.position);
-                if (cycEnabled)
+                if (cycAuth!=0)
                 {
                     choppercontrol.x = vessel.ctrlState.roll; 
                     choppercontrol.y = vessel.ctrlState.pitch;
                     choppercontrol.y -= Vector3.Dot(vel, hdg) * cycTrim * 0.01f;
                     choppercontrol.z = vessel.ctrlState.mainThrottle;// -  * vessel.ctrlState.pitch - colDiffRollCoeff * vessel.ctrlState.roll;
-                    
+
                     //thrustTransforms[0].forward = Quaternion.AngleAxis(-choppercontrol.x * maxSwashPlateAngle, hdg) * thrustTransformVectorDefault;
                     //thrustTransforms[0].forward = Quaternion.AngleAxis(choppercontrol.y * maxSwashPlateAngle, rgt) * thrustTransforms[0].forward;
 
-                    float rollangle = (float)Vector3d.Angle(rgt, vessel.upAxis) - 90f;
-                    float pitchangle = 90f - (float)Vector3d.Angle(hdg, vessel.upAxis);
+                    Vector3 upAxis = (Vector3)vessel.upAxis;
+                    float rollangle = Vector3.SignedAngle(rgt,upAxis,hdg)-90f;
+                    float pitchangle = 90f - Vector3.SignedAngle(upAxis,hdg,rgt);
                     
                     rollPID.Update(-rollKp, -rollKi, -rollKd, choppercontrol.x * 60, rollangle, Time.deltaTime);
                     pitchPID.Update(-pitchKp, -pitchKi, -pitchKd, choppercontrol.y * 60, pitchangle, Time.deltaTime);
 
                     if (colDiffRoll)//Osprey
                     {
-                        choppercontrol.z += rollPID.getDrive() / 100 * colDiffRollCoeff;
+                        choppercontrol.z += rollPID.getDrive() * cycAuth / 100 * colDiffRollCoeff;
                         choppercontrol.x = 0;
                         choppercontrol.y = pitchPID.getDrive() / 100 + pitchDiffYawCoeff * vessel.ctrlState.yaw;
+                        choppercontrol.y *= cycAuth;
                     }
                     else if (colDiffPitch)//Chinook
                     {
-                        choppercontrol.z += pitchPID.getDrive() / 100 * colDiffPitchCoeff;
+                        choppercontrol.z += pitchPID.getDrive() * cycAuth / 100 * colDiffPitchCoeff;
                         choppercontrol.y = Vector3.Dot(vel, hdg) * cycTrim * 0.01f;
                         choppercontrol.x = rollPID.getDrive() / 100 + rollDiffYawCoeff * vessel.ctrlState.yaw;
+                        choppercontrol.x *= cycAuth;
                     }
                     else
                     {
                         choppercontrol.y = pitchPID.getDrive() / 100 + pitchDiffYawCoeff * vessel.ctrlState.yaw;
+                        choppercontrol.y *= cycAuth;
                         choppercontrol.x = rollPID.getDrive() / 100 + rollDiffYawCoeff * vessel.ctrlState.yaw;
+                        choppercontrol.x *= cycAuth;
                     }
-
 
 
                 }
@@ -251,22 +256,25 @@ namespace AJE
         public override void CalculateEngineParams()
         {
             base.CalculateEngineParams();
-
-            ShaftPower = (float)(engineSolver as SolverRotor).GetPower() / 745.7f;
-            RPM = (engineSolver as SolverRotor).omega / 0.1047f;
-
-            Vector3 F = Vector3.ProjectOnPlane((engineSolver as SolverRotor).Force, thrustTransforms[0].forward.normalized);
-            part.Rigidbody.AddForce(F * 0.001f);
-  //          part.Rigidbody.AddTorque(Vector3.Cross(thrustTransforms[0].transform.position - part.Rigidbody.position, F) * 0.001f);
-            part.Rigidbody.AddTorque((engineSolver as SolverRotor).Tilt * 0.001f);
-
-            if (clockWise == 0)
+            if (EngineIgnited && (engineSolver as SolverRotor).omega>0)
             {
-                part.Rigidbody.AddTorque(thrustTransforms[0].forward.normalized * (engineSolver as SolverRotor).shaftpower / (engineSolver as SolverRotor).omega * yawCoeff * -0.05f * vessel.ctrlState.yaw);
-            }
-            else
-            {
-                part.Rigidbody.AddTorque((engineSolver as SolverRotor).Torque * yawCoeff * -0.05f * vessel.ctrlState.yaw);
+                ShaftPower = (float)(engineSolver as SolverRotor).GetPower() / 745.7f;
+                RPM = (engineSolver as SolverRotor).omega / 0.1047f;
+
+                Vector3 F = Vector3.ProjectOnPlane((engineSolver as SolverRotor).Force, thrustTransforms[0].forward.normalized);
+                part.Rigidbody.AddForceAtPosition(F * 0.001f, thrustTransforms[0].position);
+                //          part.Rigidbody.AddTorque(Vector3.Cross(thrustTransforms[0].transform.position - part.Rigidbody.position, F) * 0.001f);
+                part.Rigidbody.AddTorque((engineSolver as SolverRotor).Tilt * 0.001f);
+                part.Rigidbody.AddTorque((engineSolver as SolverRotor).Torque * -0.001f / (engineSolver as SolverRotor).shaftpower * (engineSolver as SolverRotor).outputpower);
+
+                if (clockWise == 0)
+                {
+                    part.Rigidbody.AddTorque(thrustTransforms[0].forward.normalized * (engineSolver as SolverRotor).shaftpower / (engineSolver as SolverRotor).omega * yawCoeff * -0.05f * vessel.ctrlState.yaw);
+                }
+                else
+                {
+                    part.Rigidbody.AddTorque((engineSolver as SolverRotor).Torque * yawCoeff * -0.05f * vessel.ctrlState.yaw);
+                }
             }
            /* Vector3 L = (float)(engineSolver as SolverRotor).thrust * thrustTransforms[0].forward.normalized;
 
