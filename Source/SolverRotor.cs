@@ -23,7 +23,7 @@ namespace AJE
         float a; float CL0, AoA0, LDR0, CD0;//AoA, max lift coefficient, AoA of max takeoff
         
         public Vector3 Force, Torque, Drag, Tilt;//in Newton,meter
-        float mach1;
+        float mach1, dihedral;
         int clockWise;
         SmoothInput smoothinputX, smoothinputY, smoothinputZ, smoothinputP;
         public SolverRotor(float omega, float r, float weight, float power0, float rho0, float buff, float BSFC, bool useOxygen, int clockWise)
@@ -45,7 +45,7 @@ namespace AJE
             inertia = weight / 15 / 3 * r * r * r; //assume the rotor is 1/15 of max take-off weight
             this.omega = 1;
             this.power = 0;
-
+            this.dihedral = 0;
             float tau = 30 / omega0;
             smoothinputX = new SmoothInput(tau/2);
             smoothinputY = new SmoothInput(tau/2);
@@ -134,7 +134,7 @@ namespace AJE
                 Vector3 fxt = Vector3.Cross(f, this.t);
                 fxt.Normalize();
                 
-                Vector3 b = Quaternion.AngleAxis(-5f, fxt) * (Quaternion.AngleAxis(90, this.t) * fxt);//parallel to blade,5deg dihedral
+                Vector3 b = Quaternion.AngleAxis(-dihedral, fxt) * (Quaternion.AngleAxis(90, this.t) * fxt);//parallel to blade,5deg dihedral
 
             
                 if (clockWise == -1 || clockWise == 0)
@@ -296,6 +296,9 @@ namespace AJE
                 {
                     thrust *= 1 + groundEffect;
                 }
+
+                dihedral = 5 * (float)thrust / (weight * 9.80665f);
+
                 Isp = thrust / (fuelFlow * 9.80665d);
                 SFC = 3600d / Isp;
 

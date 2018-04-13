@@ -209,8 +209,8 @@ namespace AJE
                     float rollangle = Vector3.SignedAngle(rgt,upAxis,hdg)-90f;
                     float pitchangle = 90f - Vector3.SignedAngle(upAxis,hdg,rgt);
                     
-                    rollPID.Update(-rollKp, -rollKi, -rollKd, choppercontrol.x * 60, rollangle, Time.deltaTime);
-                    pitchPID.Update(-pitchKp, -pitchKi, -pitchKd, choppercontrol.y * 60, pitchangle, Time.deltaTime);
+                    rollPID.Update(-rollKp, -rollKi, -rollKd, choppercontrol.x * 90, rollangle, Time.deltaTime);
+                    pitchPID.Update(-pitchKp, -pitchKi, -pitchKd, choppercontrol.y * 90, pitchangle, Time.deltaTime);
 
                     if (colDiffRoll)//Osprey
                     {
@@ -264,7 +264,7 @@ namespace AJE
                 Vector3 F = Vector3.ProjectOnPlane((engineSolver as SolverRotor).Force, thrustTransforms[0].forward.normalized);
                 part.Rigidbody.AddForceAtPosition(F * 0.001f, thrustTransforms[0].position);
                 //          part.Rigidbody.AddTorque(Vector3.Cross(thrustTransforms[0].transform.position - part.Rigidbody.position, F) * 0.001f);
-                part.Rigidbody.AddTorque((engineSolver as SolverRotor).Tilt * 0.001f);
+                part.Rigidbody.AddTorque((engineSolver as SolverRotor).Tilt * 0.0002f);
                 part.Rigidbody.AddTorque((engineSolver as SolverRotor).Torque * -0.001f / (engineSolver as SolverRotor).shaftpower * (engineSolver as SolverRotor).outputpower);
 
                 if (clockWise == 0)
