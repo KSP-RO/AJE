@@ -35,6 +35,9 @@ namespace AJE
         public float maxSwashPlateAngle = 20f;
         [KSPField]
         public int clockWise = -1;
+        [KSPField]
+        public bool flapHingeOffset = true;
+
         #endregion
         #region Control/Display fields
 
@@ -248,6 +251,7 @@ namespace AJE
             }
             
             Vector3 t = thrustTransforms[0].forward.normalized;
+            vel+= Vector3.Cross(vessel.angularVelocity, thrustTransforms[0].position - vessel.transform.position);
             (engineSolver as SolverRotor).UpdateFlightParams(choppercontrol, vel, hdg, t, radar, (float)ambientTherm.SpeedOfSound(1), this.thrustPercentage);
 
             base.UpdateSolver(ambientTherm, altitude, vel, mach, ignited, oxygen, underwater);
@@ -264,7 +268,8 @@ namespace AJE
                 Vector3 F = Vector3.ProjectOnPlane((engineSolver as SolverRotor).Force, thrustTransforms[0].forward.normalized);
                 part.Rigidbody.AddForceAtPosition(F * 0.001f, thrustTransforms[0].position);
                 //          part.Rigidbody.AddTorque(Vector3.Cross(thrustTransforms[0].transform.position - part.Rigidbody.position, F) * 0.001f);
-                part.Rigidbody.AddTorque((engineSolver as SolverRotor).Tilt * 0.0002f);
+                if(flapHingeOffset) //flap hinge offset increases control ability by applying torque on shaft
+                    part.Rigidbody.AddTorque((engineSolver as SolverRotor).Tilt * 0.0001f);
                 part.Rigidbody.AddTorque((engineSolver as SolverRotor).Torque * -0.001f / (engineSolver as SolverRotor).shaftpower * (engineSolver as SolverRotor).outputpower);
 
                 if (clockWise == 0)
