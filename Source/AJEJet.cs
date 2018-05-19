@@ -79,7 +79,7 @@ namespace AJE
         public float wetThrust = 0f;
         [EngineFitData]
         [KSPField(isPersistant = false, guiActive = false)]
-        public float idleNPR = 1.1f;
+        public float idleNPR = 1.05f;
 
         [KSPField(isPersistant = false, guiActive = false)]
         public string spoolEffectName2 = "spool2";
