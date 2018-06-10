@@ -82,9 +82,10 @@ namespace AJE
         public void UpdateFlightParams(Vector3 controlInput, Vector3 vel,Vector3 forward,Vector3 thrust,float radar,float speedofsound,float thrustlimiter)
         {
             this.choppercontrol = controlInput;
-            choppercontrol.x = smoothinputX.Smooth(choppercontrol.x);
+          /*  choppercontrol.x = smoothinputX.Smooth(choppercontrol.x);
             choppercontrol.y = smoothinputY.Smooth(choppercontrol.y);
             choppercontrol.z = smoothinputZ.Smooth(choppercontrol.z);
+            */
 
             float r = choppercontrol.x * choppercontrol.x + choppercontrol.y * choppercontrol.y;
             if (r > 1)
