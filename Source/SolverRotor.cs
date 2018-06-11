@@ -268,9 +268,9 @@ namespace AJE
                 //effective translational lift
                 float crossWind = Vector3.ProjectOnPlane(v,t).magnitude;
                 if (crossWind > 10)
-                    thrust *= 1.3f;
+                    thrust *= 1.2f;
                 else if (crossWind > 5)
-                    thrust *= 0.3 / 5 * (crossWind - 5) + 1;
+                    thrust *= 0.2 / 5 * (crossWind - 5) + 1;
                 //happens at 10-20kn
 
                 fuelFlow = BSFC * power * flowMult;

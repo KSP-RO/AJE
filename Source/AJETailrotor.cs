@@ -111,9 +111,9 @@ namespace AJE
 
             //effective translational lift
             if (vx > 10)
-                lift *= 1.3f;
+                lift *= 1.2f;
             else if (vx > 5)
-                lift *= 0.3f / 5 * (vx - 5) + 1;
+                lift *= 0.2f / 5 * (vx - 5) + 1;
             //happens at 10-20kn
 
             if (Mathf.Abs(vz) < 50)
