@@ -24,5 +24,13 @@
     ],
     "install": [
         { "find": "GameData/AJE", "install_to": "GameData" }
+    ],
+    "x_netkan_override": [
+        {
+            "version": "v2.11.4.1",
+            "override": {
+                "ksp_version" : "1.4.5"
+            }
+        }
     ]
 }
