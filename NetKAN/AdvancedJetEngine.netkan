@@ -1,5 +1,5 @@
 {
-    "spec_version": "v1.4",
+    "spec_version": "v1.6.1",
     "identifier": "AdvancedJetEngine",
     "$kref": "#/ckan/github/KSP-RO/AJE",
     "$vref": "#/ckan/ksp-avc",
@@ -20,18 +20,9 @@
         { "name": "RealFuels" }
     ],
     "suggests": [
-        { "name": "HotRockets" }
+        { "name": "RealPlume" }
     ],
     "install": [
         { "find": "GameData/AJE", "install_to": "GameData" }
-    ],
-    "x_netkan_override": [
-        {
-            "version": "v2.11.4.1",
-            "delete": [ "ksp_version_max" ],
-            "override": {
-                "ksp_version" : "1.4.5"
-            }
-        }
     ]
 }
