@@ -565,7 +565,7 @@ namespace AJE
             double cPReq, J;
             double RPS = RPM * (1d / 60d);
 
-            if (RPS != 0d)
+            if (Math.Abs(RPS) > 0.001)
                 J = Vel / (Diameter * RPS);
             else
                 J = Vel / Diameter;
