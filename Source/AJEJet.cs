@@ -140,9 +140,9 @@ namespace AJE
             if (centrifugalFlowMachEtaCurve.keys.Count == 0)
             {
                 centrifugalFlowMachEtaCurve = new DoubleCurve();
-                centrifugalFlowMachEtaCurve.Add(0.85d, 1.0d, 0d, 0d);
-                centrifugalFlowMachEtaCurve.Add(1.0d, 0.7d, 0d, 0d);
-                centrifugalFlowMachEtaCurve.Add(1.3d, 0.85d, 0d, 0d);
+                centrifugalFlowMachEtaCurve.Add(0.81d, 1.0d, 0d, 0d);
+                centrifugalFlowMachEtaCurve.Add(1.0d, 0.4d, 0d, 0d);
+                centrifugalFlowMachEtaCurve.Add(1.3d, 0.6d, 0d, 0d);
             }
 
             //           bool DREactive = AssemblyLoader.loadedAssemblies.Any(
