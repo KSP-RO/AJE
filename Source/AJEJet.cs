@@ -98,6 +98,12 @@ namespace AJE
         [KSPField(isPersistant = false, guiName = "Afterburner Throttle", guiFormat = "N2", guiUnits = "%")]
         public float actualABThrottle;
 
+        [KSPField(isPersistant = false, guiActive = false)]
+        public bool isCentrifugalFlow = false;
+
+        [KSPField(isPersistant = false, guiActive = false)]
+        public DoubleCurve centrifugalFlowMachEtaCurve;
+
 #if DEBUG
         [KSPField(guiActive = true, guiName = "Nozzle Area", guiFormat = "F2", guiUnits = "m^2")]
         public float nozzleArea;
@@ -107,6 +113,35 @@ namespace AJE
 #endif
 
         private SolverJet solverJet;
+
+        public override void OnAwake()
+        {
+            base.OnAwake();
+
+            if (centrifugalFlowMachEtaCurve == null)
+                centrifugalFlowMachEtaCurve = new DoubleCurve();
+        }
+
+        public override void OnLoad(ConfigNode node)
+        {
+            base.OnLoad(node);
+
+            if (centrifugalFlowMachEtaCurve.keys.Count == 0)
+            {
+                if (part.partInfo != null && part.partInfo.partPrefab != null)
+                {
+                    ModuleEnginesAJEJet jet = part.partInfo.partPrefab.FindModuleImplementing<ModuleEnginesAJEJet>();
+                    if(jet)
+                        centrifugalFlowMachEtaCurve = jet.centrifugalFlowMachEtaCurve;
+                }
+            }
+            if(centrifugalFlowMachEtaCurve.keys.Count == 0)
+            {
+                centrifugalFlowMachEtaCurve.Add(0.85d, 1.0d, 0d, 0d);
+                centrifugalFlowMachEtaCurve.Add(1.0d, 0.7d, 0d, 0d);
+                centrifugalFlowMachEtaCurve.Add(1.3d, 0.85d, 0d, 0d);
+            }
+        }
 
         public override void OnStart(StartState state)
         {
@@ -143,7 +178,9 @@ namespace AJE
                 turbineAreaRatio,
                 exhaustMixer,
                 adjustableNozzle,
-                unifiedThrottle
+                unifiedThrottle,
+                isCentrifugalFlow,
+                centrifugalFlowMachEtaCurve
                 );
             useAtmCurve = atmChangeFlow = useVelCurve = useAtmCurveIsp = useVelCurveIsp = false;
             maxEngineTemp = maxT3;

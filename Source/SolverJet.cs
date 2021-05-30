@@ -74,6 +74,12 @@ namespace AJE
         // Whether ab and core should use same throttle
         private bool unifiedThrottle;
 
+        // Whether this engine has a centrifugal flow compressor
+        private bool centrifugalFlow;
+
+        // Decline in efficiency (i.e. rise in temperature at compressor inlet)
+        private DoubleCurve centrifugalMachEtaCurve;
+
         // engine status
         protected bool combusting = true;
 
@@ -100,7 +106,9 @@ namespace AJE
             double TAR,
             bool useExhaustMixer,
             bool supersonicNozzle,
-            bool sameThrottle
+            bool sameThrottle,
+            bool isCentrifugalFlow,
+            DoubleCurve centrifugalEtaCurve
             )
         {
 
@@ -122,6 +130,9 @@ namespace AJE
             exhaustMixer = useExhaustMixer;
             adjustableNozzle = supersonicNozzle;
             unifiedThrottle = sameThrottle;
+            centrifugalFlow = isCentrifugalFlow;
+
+            centrifugalMachEtaCurve = centrifugalEtaCurve;
 
             CalculateTTR();
         }
@@ -204,17 +215,17 @@ namespace AJE
                 double coreThrottle = SolverMathUtil.Lerp(minThrottle, 1d, mainThrottle);
 
                 prat3 = CPR;
-                double invfac = eta_c * th1.Gamma / (th1.Gamma - 1.0);
+                //double invfac = eta_c * th1.Gamma / (th1.Gamma - 1.0);
                 double turbineWork = 0d;
                 for (int i = 0; i < 20; i++)    //use iteration to calculate CPR
                 {
-                    th3 = th1.AdiabaticProcessWithPressureRatio(prat3, efficiency: eta_c);
+                    th3 = th1.AdiabaticProcessWithPressureRatio(prat3, efficiency: EtaCMach());
                     // FIXME use ffFraction here? Instead of just multiplying thrust by fuel fraction in the module?
                     // is so, set multiplyThrustByFuelFrac = false in the ModuleEnginesAJEJet.
                     th4 = th3.AddFuelToTemperature(Tt4, h_f, throttle: coreThrottle);
                     th5 = th4.AdiabaticProcessWithTempRatio(TTR, out turbineWork, eta_t);
 
-                    th3 = th1.AdiabaticProcessWithWork(turbineWork / (1d + fanWorkConstant), efficiency: eta_c);
+                    th3 = th1.AdiabaticProcessWithWork(turbineWork / (1d + fanWorkConstant), efficiency: EtaCMach());
 
                     double x = prat3;
 
@@ -226,6 +237,7 @@ namespace AJE
 
                 if (BPR > 0d)
                 {
+                    // Note: use regular eta_c here since this is upstream of the compressor (so centrifugal flow doesn't matter)
                     th2 = th1.AdiabaticProcessWithWork(turbineWork * fanWorkConstant / (1d + fanWorkConstant) / BPR, efficiency: eta_c);
                     th2.MassRatio = BPR;
                     prat2 = th2.P / th1.P;
@@ -485,6 +497,14 @@ namespace AJE
             Tt7 = TAB;
             CalculatePerformance(1d, 1d, 1d, 1d);
             return thrust - wetThrust;
+        }
+
+        private double EtaCMach()
+        {
+            if (centrifugalFlow)
+                return centrifugalMachEtaCurve.Evaluate(mach) * eta_c;
+
+            return eta_c;
         }
 
         public override double GetEngineTemp() { return th3.T; }
