@@ -25,7 +25,7 @@ namespace AJE
         private EngineThermodynamics th2 = new EngineThermodynamics();
 
         //Conditions at burner inlet / compressor exit
-        private double eta_c, inv_eta_c;
+        private double eta_c;
         private EngineThermodynamics th3 = new EngineThermodynamics();
 
         //conditions at burner exit / turbine entrance; pressure, temperature, mass flow rate
@@ -119,7 +119,7 @@ namespace AJE
             FPR = fanRatio;
             M_d = designMach;
             T_d = designTemperature;
-            eta_c = compressorEta; inv_eta_c = 1d / eta_c;
+            eta_c = compressorEta;
             eta_t = turbineEta;
             eta_n = nozzleEta;
             h_f = heatOfFuel;
@@ -139,6 +139,8 @@ namespace AJE
 
         protected void CalculateTTR()
         {
+            double old_mach = mach;
+            mach = M_d;
             //calculate TTR at design point first
 
             // Don't overwrite th0 and th1
@@ -148,7 +150,7 @@ namespace AJE
             // Note that this work is negative
             // Different mass flows between compressor, turbine, and bypass automatically taken care of by MassRatio
             double compressorWork;
-            th3 = inletTherm.AdiabaticProcessWithPressureRatio(CPR, out compressorWork, efficiency: eta_c);
+            th3 = inletTherm.AdiabaticProcessWithPressureRatio(CPR, out compressorWork, efficiency: EtaCMach());
             double fanWork = 0d;
             if (BPR > 0d)
             {
@@ -160,6 +162,8 @@ namespace AJE
             th4 = th3.AddFuelToTemperature(Tt4, h_f);
             th5 = th4.AdiabaticProcessWithWork(turbineWork, efficiency: eta_t);
             TTR = th5.T / th4.T;
+
+            mach = old_mach;
         }
 
         public override void CalculatePerformance(double airRatio, double commandedThrottle, double flowMult, double ispMult)
@@ -217,15 +221,16 @@ namespace AJE
                 prat3 = CPR;
                 //double invfac = eta_c * th1.Gamma / (th1.Gamma - 1.0);
                 double turbineWork = 0d;
+                double eta_c_mach = EtaCMach();
                 for (int i = 0; i < 20; i++)    //use iteration to calculate CPR
                 {
-                    th3 = th1.AdiabaticProcessWithPressureRatio(prat3, efficiency: EtaCMach());
+                    th3 = th1.AdiabaticProcessWithPressureRatio(prat3, efficiency: eta_c_mach);
                     // FIXME use ffFraction here? Instead of just multiplying thrust by fuel fraction in the module?
                     // is so, set multiplyThrustByFuelFrac = false in the ModuleEnginesAJEJet.
                     th4 = th3.AddFuelToTemperature(Tt4, h_f, throttle: coreThrottle);
                     th5 = th4.AdiabaticProcessWithTempRatio(TTR, out turbineWork, eta_t);
 
-                    th3 = th1.AdiabaticProcessWithWork(turbineWork / (1d + fanWorkConstant), efficiency: EtaCMach());
+                    th3 = th1.AdiabaticProcessWithWork(turbineWork / (1d + fanWorkConstant), efficiency: eta_c_mach);
 
                     double x = prat3;
 
