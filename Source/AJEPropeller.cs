@@ -183,7 +183,7 @@ namespace AJE
             pistonEngine = null;
             
             if (maxEngineTemp == 0d)
-                maxEngineTemp = 3600d;
+                maxEngineTemp = 1800d;
             heatProduction = 10f; // HACK fixme. But we don't want to create much heat in the part.
 
             double powW = power * powerMultiplier;

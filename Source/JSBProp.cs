@@ -752,13 +752,13 @@ namespace AJE
             // equation and cannot be transformed itself.
             //vMn = in.PQR*(Transform()*vH) + Transform()*vTorque;
 
-            // hacky mach drag -- should not be needed with nuFAR
-            /*if (MachDrag != null)
+            // hacky mach drag -- should not be needed with nuFAR, but nuFAR ignores the rotor disc.
+            if (MachDrag != null)
             {
                 double machDrag = MachDrag.Evaluate((float)(Vel * machInv));
                 machDrag *= machDrag * D4 * RPS * RPS * rho * 0.00004d;
                 Thrust -= machDrag;
-            }*/
+            }
 
             //MonoBehaviour.print("Prop running: thrust " + Thrust + ", Ct " + ThrustCoeff + ", RPM " + RPM + ", PAvail " + PowerAvailable + ", J " + J + ", delta RPM " + (RPM - RPS * 60d));
 

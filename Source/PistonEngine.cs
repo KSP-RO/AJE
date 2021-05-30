@@ -474,7 +474,7 @@ namespace AJE
         public double GetEGT(double combustion_efficiency, double T_amb, double Cp_air)
         {
             // using constants from JSB, along with rest of code.
-            double enthalpy_exhaust = _fuelFlow * 47.3e6d * combustion_efficiency * 0.30d;
+            double enthalpy_exhaust = _fuelFlow * 47.3e6d * Math.Max(0.1d, combustion_efficiency) * 0.30d;
             double heat_capacity_exhaust = (Cp_air * _airFlow) + (1700d * _fuelFlow); // hsp of AvGas in J/kg
             double delta_T_exhaust = enthalpy_exhaust / heat_capacity_exhaust;
             return T_amb + delta_T_exhaust;
@@ -515,7 +515,7 @@ namespace AJE
                 _running = false;
                 canStart = false;
             }
-            if (!solver.oxygen || solver.rho <= 0d)
+            if (!solver.oxygen || solver.rho <= 0.02d)
             {
                 _status = "No Oxygen";
                 _running = false;
