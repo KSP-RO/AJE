@@ -122,27 +122,6 @@ namespace AJE
                 centrifugalFlowMachEtaCurve = new DoubleCurve();
         }
 
-        public override void OnLoad(ConfigNode node)
-        {
-            base.OnLoad(node);
-
-            if (centrifugalFlowMachEtaCurve.keys.Count == 0)
-            {
-                if (part.partInfo != null && part.partInfo.partPrefab != null)
-                {
-                    ModuleEnginesAJEJet jet = part.partInfo.partPrefab.FindModuleImplementing<ModuleEnginesAJEJet>();
-                    if(jet)
-                        centrifugalFlowMachEtaCurve = jet.centrifugalFlowMachEtaCurve;
-                }
-            }
-            if(centrifugalFlowMachEtaCurve.keys.Count == 0)
-            {
-                centrifugalFlowMachEtaCurve.Add(0.85d, 1.0d, 0d, 0d);
-                centrifugalFlowMachEtaCurve.Add(1.0d, 0.7d, 0d, 0d);
-                centrifugalFlowMachEtaCurve.Add(1.3d, 0.85d, 0d, 0d);
-            }
-        }
-
         public override void OnStart(StartState state)
         {
             base.OnStart(state);
@@ -157,6 +136,15 @@ namespace AJE
 
         public override void CreateEngine()
         {
+            // Add a centrifugal curve if it doesn't exist yet.
+            if (centrifugalFlowMachEtaCurve.keys.Count == 0)
+            {
+                centrifugalFlowMachEtaCurve = new DoubleCurve();
+                centrifugalFlowMachEtaCurve.Add(0.85d, 1.0d, 0d, 0d);
+                centrifugalFlowMachEtaCurve.Add(1.0d, 0.7d, 0d, 0d);
+                centrifugalFlowMachEtaCurve.Add(1.3d, 0.85d, 0d, 0d);
+            }
+
             //           bool DREactive = AssemblyLoader.loadedAssemblies.Any(
             //               a => a.assembly.GetName().Name.Equals("DeadlyReentry.dll", StringComparison.InvariantCultureIgnoreCase));
             //         heatProduction = (float)part.maxTemp * 0.1f;
