@@ -78,7 +78,10 @@ namespace AJE
         private bool centrifugalFlow;
 
         // Decline in efficiency (i.e. rise in temperature at compressor inlet)
-        private DoubleCurve centrifugalMachEtaCurve;
+        private FloatCurve centrifugalMachEtaCurve;
+
+        // Decline in TPR with mach
+        private FloatCurve centrifugalMachTPRCurve;
 
         // engine status
         protected bool combusting = true;
@@ -108,7 +111,8 @@ namespace AJE
             bool supersonicNozzle,
             bool sameThrottle,
             bool isCentrifugalFlow,
-            DoubleCurve centrifugalEtaCurve
+            FloatCurve centrifugalEtaCurve,
+            FloatCurve centrifugalTPRCurve
             )
         {
 
@@ -133,6 +137,7 @@ namespace AJE
             centrifugalFlow = isCentrifugalFlow;
 
             centrifugalMachEtaCurve = centrifugalEtaCurve;
+            centrifugalMachTPRCurve = centrifugalTPRCurve;
 
             CalculateTTR();
         }
@@ -147,6 +152,7 @@ namespace AJE
             EngineThermodynamics ambientTherm = EngineThermodynamics.StandardConditions(false);
             ambientTherm.T = T_d;
             EngineThermodynamics inletTherm = ambientTherm.ChangeReferenceFrameMach(M_d);
+            inletTherm.P *= TPRMach();
             // Note that this work is negative
             // Different mass flows between compressor, turbine, and bypass automatically taken care of by MassRatio
             double compressorWork;
@@ -170,7 +176,7 @@ namespace AJE
         {
             // set base bits
             base.CalculatePerformance(airRatio, commandedThrottle, flowMult, ispMult);
-            
+
             // if we're not combusting, don't combust and start cooling off
             combusting = running;
             statusString = "Nominal";
@@ -222,6 +228,8 @@ namespace AJE
                 //double invfac = eta_c * th1.Gamma / (th1.Gamma - 1.0);
                 double turbineWork = 0d;
                 double eta_c_mach = EtaCMach();
+                th1.P *= TPRMach();
+
                 for (int i = 0; i < 20; i++)    //use iteration to calculate CPR
                 {
                     th3 = th1.AdiabaticProcessWithPressureRatio(prat3, efficiency: eta_c_mach);
@@ -504,13 +512,32 @@ namespace AJE
             return thrust - wetThrust;
         }
 
-        private double EtaCMach()
+        public double EtaCMach()
         {
             if (centrifugalFlow)
-                return centrifugalMachEtaCurve.Evaluate(mach) * eta_c;
+                return centrifugalMachEtaCurve.Evaluate((float)mach) * eta_c;
 
             return eta_c;
         }
+
+        public double TPRMach()
+        {
+            if (centrifugalFlow)
+                return centrifugalMachTPRCurve.Evaluate((float)mach);
+
+            return 1d;
+        }
+#if DEBUG
+        public double GetTemp3()
+        {
+            return th3.T;
+        }
+
+        public double GetTPR1()
+        {
+            return th1.P / th0.P;
+        }
+#endif
 
         public override double GetEngineTemp() { return th3.T; }
         public override double GetArea() { return Aref * (1d + BPR); }

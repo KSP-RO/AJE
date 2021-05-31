@@ -102,7 +102,10 @@ namespace AJE
         public bool isCentrifugalFlow = false;
 
         [KSPField(isPersistant = false, guiActive = false)]
-        public DoubleCurve centrifugalFlowMachEtaCurve;
+        public FloatCurve centrifugalFlowMachEtaCurve;
+
+        [KSPField(isPersistant = false, guiActive = false)]
+        public FloatCurve centrifugalFlowMachTPRCurve;
 
 #if DEBUG
         [KSPField(guiActive = true, guiName = "Nozzle Area", guiFormat = "F2", guiUnits = "m^2")]
@@ -110,6 +113,18 @@ namespace AJE
 
         [KSPField(guiActive = true, guiName = "Exhaust Temperature", guiFormat = "F1", guiUnits = "K")]
         public float exhaustTemp;
+
+        [KSPField(guiActive = true, guiFormat = "F2")]
+        public double temp3;
+
+        [KSPField(guiActive = true, guiFormat = "P2")]
+        public double tpr1;
+
+        [KSPField(guiActive = true, guiFormat = "P2")]
+        public double etaCMach;
+
+        [KSPField(guiActive = true, guiFormat = "P2")]
+        public double tprMach;
 #endif
 
         private SolverJet solverJet;
@@ -119,7 +134,10 @@ namespace AJE
             base.OnAwake();
 
             if (centrifugalFlowMachEtaCurve == null)
-                centrifugalFlowMachEtaCurve = new DoubleCurve();
+                centrifugalFlowMachEtaCurve = new FloatCurve();
+
+            if (centrifugalFlowMachTPRCurve == null)
+                centrifugalFlowMachTPRCurve = new FloatCurve();
         }
 
         public override void OnStart(StartState state)
@@ -136,14 +154,20 @@ namespace AJE
 
         public override void CreateEngine()
         {
-            // Add a centrifugal curve if it doesn't exist yet.
-            if (centrifugalFlowMachEtaCurve.keys.Count == 0)
+            // Add centrifugal curves if needed
+            if (centrifugalFlowMachEtaCurve.Curve.length == 0)
             {
-                centrifugalFlowMachEtaCurve = new DoubleCurve();
-                centrifugalFlowMachEtaCurve.Add(0.85d, 1.0d, 0d, 0d);
-                centrifugalFlowMachEtaCurve.Add(1.0d, 0.6d, 0d, 0d);
-                centrifugalFlowMachEtaCurve.Add(1.15d, 0.8d, 0d, 0d);
-                centrifugalFlowMachEtaCurve.Add(2.0d, 0.5d, 0d, 0d);
+                centrifugalFlowMachEtaCurve.Add(0.85f, 1.0f, 0f, 0f);
+                centrifugalFlowMachEtaCurve.Add(1.0f, 0.85f, 0f, 0f);
+                centrifugalFlowMachEtaCurve.Add(1.15f, 0.9f, 0f, 0f);
+                centrifugalFlowMachEtaCurve.Add(2.0f, 0.8f, 0f, 0f);
+            }
+            if (centrifugalFlowMachTPRCurve.Curve.length == 0)
+            {
+                centrifugalFlowMachTPRCurve.Add(0.85f, 1.0f, 0f, 0f);
+                centrifugalFlowMachTPRCurve.Add(1.0f, 0.6f, 0f, 0f);
+                centrifugalFlowMachTPRCurve.Add(1.15f, 0.8f, 0f, 0f);
+                centrifugalFlowMachTPRCurve.Add(2.0f, 0.5f, 0f, 0f);
             }
 
             //           bool DREactive = AssemblyLoader.loadedAssemblies.Any(
@@ -169,7 +193,8 @@ namespace AJE
                 adjustableNozzle,
                 unifiedThrottle,
                 isCentrifugalFlow,
-                centrifugalFlowMachEtaCurve
+                centrifugalFlowMachEtaCurve,
+                centrifugalFlowMachTPRCurve
                 );
             useAtmCurve = atmChangeFlow = useVelCurve = useAtmCurveIsp = useVelCurveIsp = false;
             maxEngineTemp = maxT3;
@@ -272,6 +297,10 @@ namespace AJE
 #if DEBUG
             nozzleArea = GetNozzleArea();
             exhaustTemp = GetEmissiveTemp();
+            temp3 = solverJet.GetTemp3();
+            tpr1 = solverJet.GetTPR1();
+            etaCMach = solverJet.EtaCMach();
+            tprMach = solverJet.TPRMach();
 #endif
         }
 
