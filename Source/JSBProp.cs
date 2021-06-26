@@ -756,7 +756,7 @@ namespace AJE
             if (MachDrag != null)
             {
                 double machDrag = MachDrag.Evaluate((float)(Vel * machInv));
-                machDrag *= machDrag * Diameter * Diameter * rho * 5000d * Math.Cos(Math.PI / 180d * Pitch);
+                machDrag *= machDrag * Diameter * Diameter * rho * 10000d * Math.Cos(Math.PI / 180d * Pitch);
                 Thrust -= machDrag;
             }
 
