@@ -337,7 +337,7 @@ namespace AJE
         #region Helpers
         public void SetFields()
         {
-            Fields["engineTempString"].guiName = "Exhaust Temp";
+            Fields["engineTemp"].guiName = "Exhaust Temp";
 
             if (!useOxygen)
             {
