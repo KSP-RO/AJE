@@ -107,6 +107,9 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = false)]
         public FloatCurve centrifugalFlowMachTPRCurve;
 
+        [KSPField(isPersistant = false, guiActive = false)]
+        public double tt7_max = 4000d;
+
 #if DEBUG
         [KSPField(guiActive = true, guiName = "Nozzle Area", guiFormat = "F2", guiUnits = "m^2")]
         public float nozzleArea;
@@ -194,7 +197,8 @@ namespace AJE
                 unifiedThrottle,
                 isCentrifugalFlow,
                 centrifugalFlowMachEtaCurve,
-                centrifugalFlowMachTPRCurve
+                centrifugalFlowMachTPRCurve,
+                tt7_max
                 );
             useAtmCurve = atmChangeFlow = useVelCurve = useAtmCurveIsp = useVelCurveIsp = false;
             maxEngineTemp = maxT3;

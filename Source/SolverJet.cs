@@ -87,7 +87,7 @@ namespace AJE
         protected bool combusting = true;
 
         // Engine fit data
-        protected double dryThrust, drySFC, wetThrust, idleNPR;
+        protected double dryThrust, drySFC, wetThrust, idleNPR, tt7_max;
 
         //---------------------------------------------------------
         //Initialization Functions
@@ -112,7 +112,8 @@ namespace AJE
             bool sameThrottle,
             bool isCentrifugalFlow,
             FloatCurve centrifugalEtaCurve,
-            FloatCurve centrifugalTPRCurve
+            FloatCurve centrifugalTPRCurve,
+            double tt7_max
             )
         {
 
@@ -129,6 +130,7 @@ namespace AJE
             h_f = heatOfFuel;
             Tt4 = max_TIT;
             Tt7 = max_TAB;
+            this.tt7_max = tt7_max;
             minThrottle = idleThrottle;
             turbineAreaRatio = TAR;
             exhaustMixer = useExhaustMixer;
@@ -470,18 +472,18 @@ namespace AJE
                         doFit = false;
                     }
 
-                    Tt7 = 4000d;
+                    Tt7 = tt7_max;
                     CalculatePerformance(1d, 1d, 1d, 1d);
                     if (thrust <= wetThrust)
                     {
-                        Debug.LogWarning("Cannot fit wet thrust on engine solver because it would require an afterburner temperature of more than 4000 K.");
+                        Debug.LogWarning($"Cannot fit wet thrust on engine solver because it would require an afterburner temperature of more than {tt7_max} K.");
                         doFit = false;
                     }
                 }
 
                 if (doFit)
                 {
-                    Tt7 = SolverMathUtil.BrentsMethod(WetThrustFittingFunction, th5.T, 4000d, maxIter: 1000);
+                    Tt7 = SolverMathUtil.BrentsMethod(WetThrustFittingFunction, th5.T, tt7_max, maxIter: 1000);
                 }
                 else
                 {
