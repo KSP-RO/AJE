@@ -119,7 +119,7 @@ namespace AJE
         public override string GetInfo()
         {
             string output = "<b>Max Rated Thrust:</b> " + thrustUpperLimit.ToString("N2") + " kN\n";
-            output += "<b>Area:</b> " + Area + "\n";
+            output += "<b>Required Area:</b> " + Area + " m^2\n";
 
             output += "\n<b><color=#99ff00ff>Propellants:</color></b>\n";
             Propellant p;
