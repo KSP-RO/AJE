@@ -1,0 +1,98 @@
+name: "Attach Release Artifacts"
+
+on:
+  release:
+    types: [published]
+
+env:
+  KSP_ROOT: /tmp/ksp
+
+permissions:
+  contents: write
+
+jobs:
+  attach-release-artifacts:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Get Branch
+        shell: bash
+        run: |
+          releaseBranch=${{ github.event.release.target_commitish }}
+          echo "Found branch ${releaseBranch}"
+          echo "tagged_branch=${releaseBranch}" >> $GITHUB_ENV
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.tagged_branch }}
+
+      - name: Download required assemblies
+        id: download-assemblies
+        uses: KSP-RO/BuildTools/download-assemblies-v2@master
+        with:
+          KSP_ZIP_PASSWORD: ${{ secrets.KSP_ZIP_PASSWORD }}
+          dependency-identifiers: |
+            SolverEngines
+
+      # The csproj references have no HintPath, so everything has to be in a single ReferencePath folder
+      - name: Collect references
+        run: cp -v "${KSP_ROOT}/GameData/SolverEngines/Plugins/SolverEngines.dll" "${KSP_ROOT}/KSP_x64_Data/Managed/"
+
+      - name: Install Mono MSBuild
+        run: sudo apt-get install -y mono-devel
+
+      - name: Update AssemblyInfo
+        uses: KSP-RO/BuildTools/update-assembly-info@master
+        with:
+          path: ${{ github.workspace }}/Source/Properties/AssemblyInfo.cs
+          tag: ${{ github.event.release.tag_name }}
+
+      - name: Build mod solution
+        run: msbuild "${{ github.workspace }}/Source/AJE.sln" /t:build /p:Configuration=Release /p:ReferencePath="${KSP_ROOT}/KSP_x64_Data/Managed"
+
+      - name: Remove excess DLLs
+        uses: KSP-RO/BuildTools/remove-excess-dlls@master
+        with:
+          path: ${{ github.workspace }}/GameData/
+
+      - name: Update version file
+        uses: KSP-RO/BuildTools/update-version-file@master
+        with:
+          tag: ${{ github.event.release.tag_name }}
+          path: ${{ github.workspace }}/GameData/AJE/AJE.version
+
+      - name: Assemble release
+        id: assemble-release
+        run: |
+          RELEASE_DIR="${RUNNER_TEMP}/release"
+          RELEASE_ZIP="Advanced_Jet_Engine_${{ github.event.release.tag_name }}.zip"
+          echo "Release dir: ${RELEASE_DIR}"
+          echo "Release zip: ${RELEASE_DIR}/${RELEASE_ZIP}"
+          mkdir -v -p "${RELEASE_DIR}/GameData"
+          echo "release-zip=${RELEASE_DIR}/${RELEASE_ZIP}" >> $GITHUB_OUTPUT
+          cp -v -R "${{ github.workspace }}/GameData/AJE" "${RELEASE_DIR}/GameData/"
+          cd "${RELEASE_DIR}"
+          zip -r "${RELEASE_ZIP}" GameData
+
+      - name: Upload package to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ steps.assemble-release.outputs.release-zip }}"
+
+      - name: Setup git config
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+
+      - name: Commit changes
+        shell: bash
+        env:
+          TAG_STRING: ${{ github.event.release.tag_name }}
+        run: |
+          RELEASEBRANCH=${{ env.tagged_branch }}
+          git add "${{ github.workspace }}/GameData/AJE/AJE.version"
+          git commit -m "Update version to $TAG_STRING"
+          git push origin $RELEASEBRANCH
+          git tag $TAG_STRING $RELEASEBRANCH --force
+          git push origin $TAG_STRING --force

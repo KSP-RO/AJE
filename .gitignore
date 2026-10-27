@@ -438,8 +438,7 @@ $RECYCLE.BIN/
 # Other mods in GameData are dependencies, don't version them
 GameData/*
 !GameData/AJE
-# Built DLL is committed, everything else is a dependency
+# Build output and dependencies. Release builds come from CI
 *.dll
-!GameData/AJE/Plugins/AJE.dll
-# Mono debug symbols from pdb2mdb
+*.mdb
 *.zip

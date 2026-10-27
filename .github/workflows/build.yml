@@ -1,0 +1,78 @@
+name: build
+
+on:
+  push:
+    branches: [ master, CI ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+env:
+  KSP_ROOT: /tmp/ksp
+
+jobs:
+  check-secret:
+    uses: KSP-RO/BuildTools/.github/workflows/check-secret.yml@master
+    secrets:
+      KSP_ZIP_PASSWORD: ${{ secrets.KSP_ZIP_PASSWORD }}
+
+  validate-cfg-files:
+    uses: KSP-RO/BuildTools/.github/workflows/validate-cfg-files.yml@master
+
+  build:
+    runs-on: ubuntu-22.04
+    needs: [check-secret]
+    if: needs.check-secret.outputs.has-password == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download required assemblies
+        id: download-assemblies
+        uses: KSP-RO/BuildTools/download-assemblies-v2@master
+        with:
+          KSP_ZIP_PASSWORD: ${{ secrets.KSP_ZIP_PASSWORD }}
+          dependency-identifiers: |
+            SolverEngines
+
+      # The csproj references have no HintPath, so everything has to be in a single ReferencePath folder
+      - name: Collect references
+        run: cp -v "${KSP_ROOT}/GameData/SolverEngines/Plugins/SolverEngines.dll" "${KSP_ROOT}/KSP_x64_Data/Managed/"
+
+      - name: Install Mono MSBuild
+        run: sudo apt-get install -y mono-devel
+
+      - name: Update AssemblyInfo
+        uses: KSP-RO/BuildTools/update-assembly-info@master
+        with:
+          path: ${{ github.workspace }}/Source/Properties/AssemblyInfo.cs
+          tag: "2.99.0.0"
+
+      - name: Build mod solution
+        run: msbuild "${{ github.workspace }}/Source/AJE.sln" /t:build /p:Configuration=Release /p:ReferencePath="${KSP_ROOT}/KSP_x64_Data/Managed"
+
+      - name: Remove excess DLLs
+        uses: KSP-RO/BuildTools/remove-excess-dlls@master
+        with:
+          path: ${{ github.workspace }}/GameData/
+
+      - name: Build metadata
+        uses: KSP-RO/BuildTools/update-version-file@master
+        with:
+          path: ${{ github.workspace }}/GameData/AJE/AJE.version
+          tag: "v2.99.0.0"
+
+      - name: Assemble release
+        id: assemble-release
+        run: |
+          RELEASE_DIR="${RUNNER_TEMP}/release"
+          echo "Release dir: ${RELEASE_DIR}"
+          mkdir -v -p "${RELEASE_DIR}/GameData"
+          echo "release-dir=${RELEASE_DIR}" >> $GITHUB_OUTPUT
+          cp -v -R "${{ github.workspace }}/GameData/AJE" "${RELEASE_DIR}/GameData/"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AJE
+          path: ${{ steps.assemble-release.outputs.release-dir }}

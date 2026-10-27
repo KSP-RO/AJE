@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿#define CIBUILD_disabled
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -33,7 +34,12 @@ using System.Runtime.InteropServices;
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("2.20.0.0")]
-[assembly: AssemblyFileVersion("2.20.0.0")]
+#if CIBUILD
+[assembly: AssemblyFileVersion("@MAJOR@.@MINOR@.@PATCH@.@BUILD@")]
+[assembly: KSPAssembly("AJE", @MAJOR@, @MINOR@, @PATCH@)]
+#else
+[assembly: AssemblyFileVersion("2.20.1.0")]
+[assembly: KSPAssembly("AJE", 2, 20, 1)]
+#endif
 
-[assembly: KSPAssembly("AJE", 2, 19, 0)]
 [assembly: KSPAssemblyDependencyEqualMajor("SolverEngines", 3, 13)]
